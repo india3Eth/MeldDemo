@@ -20,6 +20,7 @@ import { CurrencyModal } from "@/components/modals/CurrencyModal";
 import { CryptoModal } from "@/components/modals/CryptoModal";
 import { ProviderModal } from "@/components/modals/ProviderModal";
 import { PaymentMethodModal } from "@/components/modals/PaymentMethodModal";
+import { TransactionHistoryModal } from "@/components/modals/TransactionHistoryModal";
 
 // Context
 import { useWidget } from "@/contexts/WidgetContext";
@@ -28,7 +29,7 @@ import { useWidget } from "@/contexts/WidgetContext";
 // MeldWidget — the main crypto buy/sell widget
 // =============================================================================
 
-type ModalType = "country" | "fiatCurrency" | "crypto" | "provider" | "paymentMethod" | null;
+type ModalType = "country" | "fiatCurrency" | "crypto" | "provider" | "paymentMethod" | "history" | null;
 type InnerView = "status" | "history";
 
 const WAITING_STATUS_LABELS: Record<string, string> = {
@@ -113,6 +114,26 @@ export function MeldWidget() {
 
           <SubmitButton />
 
+          {/* Transaction history link */}
+          <div style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}>
+            <button
+              onClick={() => setOpenModal("history")}
+              style={{
+                background: "none",
+                border: "none",
+                color: tokens.textMuted,
+                fontSize: "12px",
+                cursor: "pointer",
+                padding: "4px 8px",
+                textDecoration: "underline",
+                textDecorationStyle: "dotted",
+                textUnderlineOffset: "3px",
+              }}
+            >
+              View transaction history
+            </button>
+          </div>
+
           <PoweredByFooter />
 
           {/* Modals */}
@@ -121,6 +142,7 @@ export function MeldWidget() {
           <CryptoModal isOpen={openModal === "crypto"} onClose={closeModal} />
           <ProviderModal isOpen={openModal === "provider"} onClose={closeModal} />
           <PaymentMethodModal isOpen={openModal === "paymentMethod"} onClose={closeModal} />
+          <TransactionHistoryModal isOpen={openModal === "history"} onClose={closeModal} />
         </>
       )}
 
