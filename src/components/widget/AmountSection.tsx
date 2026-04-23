@@ -88,30 +88,61 @@ export function AmountSection({ variant, onOpenSelector }: AmountSectionProps) {
         borderRadius: tokens.sectionRadius,
         boxShadow: tokens.sectionShadow,
         backdropFilter: tokens.sectionBackdrop,
-        padding: "20px",
+        padding: "14px 16px",
       }}
     >
-      {/* Header: label + currency pill */}
-      <div className="mb-3 flex items-center justify-between">
+      {/* Label row */}
+      <div className="mb-1.5">
         <span
-          className="text-[13px]"
+          className="text-[12px]"
           style={{ color: tokens.textSecondary, textShadow: tokens.textShadow }}
         >
           {label}
         </span>
+      </div>
 
+      {/* Amount + selector inline */}
+      <div className="flex items-center gap-3">
+        {/* Amount — takes all remaining space */}
+        {isSource ? (
+          <input
+            type="text"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "" || /^(0|[1-9]\d*)?(\.\d{0,8})?$/.test(val)) setAmount(val);
+            }}
+            className="min-w-0 flex-1 bg-transparent text-[32px] font-bold outline-none"
+            style={{
+              color: isOutOfRange ? "#f87171" : tokens.textPrimary,
+              border: "none",
+              textShadow: tokens.textShadow,
+            }}
+            placeholder="0"
+          />
+        ) : (
+          <div
+            className="min-w-0 flex-1 text-[32px] font-bold"
+            style={{ color: tokens.textSecondary, textShadow: tokens.textShadow }}
+          >
+            {displayValue}
+          </div>
+        )}
+
+        {/* Currency selector pill */}
         <button
           onClick={onOpenSelector}
-          className="flex items-center gap-1.5 transition-all duration-200"
+          className="flex shrink-0 items-center gap-1.5 transition-all duration-200"
           style={{
-            padding: "7px 12px",
+            padding: "8px 12px",
             background: tokens.pillBg,
             border: tokens.pillBorder,
             borderRadius: tokens.pillRadius,
             boxShadow: tokens.pillShadow,
             cursor: "pointer",
             fontSize: "14px",
-            fontWeight: 500,
+            fontWeight: 600,
           }}
         >
           {displayImage && (
@@ -126,67 +157,40 @@ export function AmountSection({ variant, onOpenSelector }: AmountSectionProps) {
         </button>
       </div>
 
-      {/* Amount input / display */}
-      <div className="flex items-center gap-3">
-        {isSource ? (
-          <input
-            type="text"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => {
-              const val = e.target.value;
-              // Fix #9: reject leading zeros, multiple decimals, excess precision
-              if (val === "" || /^(0|[1-9]\d*)?(\.\d{0,8})?$/.test(val)) setAmount(val);
-            }}
-            className="w-full bg-transparent text-[38px] font-bold outline-none"
-            style={{
-              color: isOutOfRange ? "#f87171" : tokens.textPrimary,
-              border: "none",
-              textShadow: tokens.textShadow,
-            }}
-            placeholder="0"
-          />
-        ) : (
-          <div
-            className="w-full text-[38px] font-bold"
-            style={{ color: tokens.textSecondary, textShadow: tokens.textShadow }}
-          >
-            {displayValue}
-          </div>
-        )}
-      </div>
+      {/* Chain info + limit below */}
+      {(chainInfo || (isSource && currentLimit)) && (
+        <div className="mt-2">
+          {chainInfo && (
+            <div className="text-[11px]" style={{ color: tokens.textMuted }}>
+              {chainInfo}
+            </div>
+          )}
 
-      {/* Chain badge for crypto */}
-      {chainInfo && (
-        <div className="mt-2 text-xs" style={{ color: tokens.textMuted }}>
-          {chainInfo}
+          {isSource && currentLimit && (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px]" style={{ color: isOutOfRange ? "#f87171" : tokens.textMuted }}>
+                  {isBelowMin ? "Minimum" : isAboveMax ? "Maximum" : "Limit"}
+                </span>
+                <span className="text-[11px] font-medium" style={{ color: isOutOfRange ? "#f87171" : tokens.textSecondary }}>
+                  {formatLimitAmount(currentLimit.minimumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
+                  {" – "}
+                  {formatLimitAmount(currentLimit.maximumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
+                </span>
+              </div>
+              {isBelowMin && (
+                <p className="mt-0.5 text-[11px] text-red-400">
+                  Enter at least {formatLimitAmount(currentLimit.minimumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
+                </p>
+              )}
+              {isAboveMax && (
+                <p className="mt-0.5 text-[11px] text-red-400">
+                  Maximum is {formatLimitAmount(currentLimit.maximumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
+                </p>
+              )}
+            </>
+          )}
         </div>
-      )}
-
-      {/* Limit range — source section only */}
-      {isSource && currentLimit && (
-        <>
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-[12px]" style={{ color: isOutOfRange ? "#f87171" : tokens.textMuted }}>
-              {isBelowMin ? "Minimum" : isAboveMax ? "Maximum" : "Limit"}
-            </span>
-            <span className="text-[12px] font-medium" style={{ color: isOutOfRange ? "#f87171" : tokens.textSecondary }}>
-              {formatLimitAmount(currentLimit.minimumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
-              {" – "}
-              {formatLimitAmount(currentLimit.maximumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
-            </span>
-          </div>
-          {isBelowMin && (
-            <p className="mt-1 text-[11px] text-red-400">
-              Enter at least {formatLimitAmount(currentLimit.minimumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
-            </p>
-          )}
-          {isAboveMax && (
-            <p className="mt-1 text-[11px] text-red-400">
-              Maximum is {formatLimitAmount(currentLimit.maximumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
-            </p>
-          )}
-        </>
       )}
     </div>
   );
