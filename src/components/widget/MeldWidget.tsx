@@ -94,7 +94,10 @@ export function MeldWidget() {
       {/* ── Idle / waiting: widget form ── */}
       {txPhase !== "active" && (
         <>
-          <WidgetHeader onOpenCountryModal={() => setOpenModal("country")} />
+          <WidgetHeader
+            onOpenCountryModal={() => setOpenModal("country")}
+            onOpenHistory={() => setOpenModal("history")}
+          />
 
           <AmountSection
             variant="source"
@@ -113,26 +116,6 @@ export function MeldWidget() {
           <PaymentMethodSelect onOpenModal={() => setOpenModal("paymentMethod")} />
 
           <SubmitButton />
-
-          {/* Transaction history link */}
-          <div style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}>
-            <button
-              onClick={() => setOpenModal("history")}
-              style={{
-                background: "none",
-                border: "none",
-                color: tokens.textMuted,
-                fontSize: "12px",
-                cursor: "pointer",
-                padding: "4px 8px",
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textUnderlineOffset: "3px",
-              }}
-            >
-              View transaction history
-            </button>
-          </div>
 
           <PoweredByFooter />
 

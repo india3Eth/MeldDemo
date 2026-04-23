@@ -10,9 +10,10 @@ import type { SessionType } from "@/lib/meld/types";
 
 interface WidgetHeaderProps {
   onOpenCountryModal: () => void;
+  onOpenHistory: () => void;
 }
 
-export function WidgetHeader({ onOpenCountryModal }: WidgetHeaderProps) {
+export function WidgetHeader({ onOpenCountryModal, onOpenHistory }: WidgetHeaderProps) {
   const { mode, setMode, selectedCountry } = useWidget();
   const { tokens } = useTheme();
 
@@ -59,30 +60,51 @@ export function WidgetHeader({ onOpenCountryModal }: WidgetHeaderProps) {
         ))}
       </div>
 
-      {/* Country Flag */}
-      <button
-        onClick={onOpenCountryModal}
-        className="flex items-center gap-1.5 transition-all duration-200"
-        style={{
-          padding: "8px 12px",
-          background: tokens.pillBg,
-          border: tokens.pillBorder,
-          borderRadius: tokens.pillRadius,
-          boxShadow: tokens.pillShadow,
-          cursor: "pointer",
-        }}
-      >
-        {selectedCountry?.flagImageUrl ? (
-          <img
-            src={selectedCountry.flagImageUrl}
-            alt={selectedCountry.name}
-            className="h-5 w-7 rounded-sm object-cover"
-          />
-        ) : (
-          <span className="text-xl">🌍</span>
-        )}
-        <span style={{ fontSize: "12px", color: tokens.textMuted }}>▼</span>
-      </button>
+      {/* Right controls: history + country */}
+      <div className="flex items-center gap-2">
+        {/* History icon button */}
+        <button
+          onClick={onOpenHistory}
+          title="Transaction history"
+          className="flex items-center justify-center transition-all duration-200"
+          style={{
+            width: "38px", height: "38px",
+            background: tokens.pillBg,
+            border: tokens.pillBorder,
+            borderRadius: tokens.pillRadius,
+            boxShadow: tokens.pillShadow,
+            cursor: "pointer",
+            fontSize: "16px",
+          }}
+        >
+          🕐
+        </button>
+
+        {/* Country Flag */}
+        <button
+          onClick={onOpenCountryModal}
+          className="flex items-center gap-1.5 transition-all duration-200"
+          style={{
+            padding: "8px 12px",
+            background: tokens.pillBg,
+            border: tokens.pillBorder,
+            borderRadius: tokens.pillRadius,
+            boxShadow: tokens.pillShadow,
+            cursor: "pointer",
+          }}
+        >
+          {selectedCountry?.flagImageUrl ? (
+            <img
+              src={selectedCountry.flagImageUrl}
+              alt={selectedCountry.name}
+              className="h-5 w-7 rounded-sm object-cover"
+            />
+          ) : (
+            <span className="text-xl">🌍</span>
+          )}
+          <span style={{ fontSize: "12px", color: tokens.textMuted }}>▼</span>
+        </button>
+      </div>
     </div>
   );
 }
