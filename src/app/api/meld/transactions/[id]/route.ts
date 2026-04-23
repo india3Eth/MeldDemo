@@ -7,8 +7,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const data = await meldClient.getTransaction(id);
-    return NextResponse.json(data);
+    const data = await meldClient.getTransaction(id) as { transaction: unknown };
+    // Meld API wraps single transaction in { transaction: {...} } — unwrap for the client
+    return NextResponse.json(data?.transaction ?? data);
   } catch (error) {
     if (error instanceof MeldApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
