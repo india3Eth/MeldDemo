@@ -21,6 +21,8 @@ import type {
   CryptoCurrencySellLimit,
   ServiceProvider,
 } from "@/lib/meld/types";
+import { supabase } from "@/lib/supabase";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCountries } from "@/hooks/use-countries";
 import { useDefaults } from "@/hooks/use-defaults";
 import { useCryptoCurrencies } from "@/hooks/use-crypto-currencies";
@@ -35,6 +37,8 @@ import { useServiceProviders } from "@/hooks/use-service-providers";
 // =============================================================================
 // Widget Context — single source of truth for all widget state
 // =============================================================================
+
+type TransactionPhase = "idle" | "waiting" | "complete" | "failed" | "timeout";
 
 interface WidgetState {
   mode: SessionType;
@@ -74,6 +78,10 @@ interface WidgetState {
 
   handleBuyOrSell: () => Promise<void>;
   currentLimit: FiatCurrencyPurchaseLimit | CryptoCurrencySellLimit | null;
+
+  txPhase: TransactionPhase;
+  txStatus: string | null;
+  resetTransaction: () => void;
 }
 
 const WidgetContext = createContext<WidgetState | null>(null);
@@ -103,6 +111,60 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
   // Track whether user has manually edited the amount — if so, don't auto-set from limit default
   const userEditedAmount = useRef(false);
 
+  // ── Transaction tracking (Supabase Realtime) ─────────────────────────
+  const [txPhase, setTxPhase] = useState<TransactionPhase>("idle");
+  const [txStatus, setTxStatus] = useState<string | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+
+  const TERMINAL_STATUSES = new Set(["SETTLED", "FAILED", "DECLINED", "CANCELLED", "REFUNDED"]);
+  const POLL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
+  function unsubscribe() {
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+  }
+
+  function resetTransaction() {
+    unsubscribe();
+    setTxPhase("idle");
+    setTxStatus(null);
+  }
+
+  function subscribeToTransaction(sessionId: string) {
+    unsubscribe();
+
+    const timeoutId = setTimeout(() => {
+      unsubscribe();
+      setTxPhase("timeout");
+    }, POLL_TIMEOUT_MS);
+
+    const channel = supabase
+      .channel(`tx:${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "transactions",
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const status: string = payload.new.status;
+          setTxStatus(status);
+          if (TERMINAL_STATUSES.has(status)) {
+            clearTimeout(timeoutId);
+            unsubscribe();
+            setTxPhase(status === "SETTLED" ? "complete" : "failed");
+          }
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+  }
+
   // Wrap setAmount to mark user intent
   const handleSetAmount = useCallback((val: string) => {
     userEditedAmount.current = true;
@@ -123,6 +185,9 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     setSessionError(null);
     setAmount("");
     userEditedAmount.current = false;
+    unsubscribe();
+    setTxPhase("idle");
+    setTxStatus(null);
   }, [mode]);
 
 
@@ -196,7 +261,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
 
     const isBuy = mode === "BUY";
     const redirectUrl = typeof window !== "undefined"
-      ? `${window.location.origin}/transaction-complete`
+      ? `${window.location.origin}/transaction/success`
       : undefined;
 
     const session = await createSession({
@@ -216,8 +281,8 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
         redirectUrl,
         redirectFlow: mode === "SELL",
       },
-      externalCustomerId: `demo-user-${Date.now()}`,
-      externalSessionId: `demo-session-${Date.now()}`,
+      externalCustomerId: walletAddress || `demo-user-${Date.now()}`,
+      externalSessionId: `demo-session-${crypto.randomUUID()}`,
     });
 
     if (!session) {
@@ -230,17 +295,23 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const popup = window.open(
+    const tab = window.open(
       session.serviceProviderWidgetUrl,
-      "meld-widget",
-      "width=450,height=700,scrollbars=yes,resizable=yes"
+      "_blank",
+      "noopener,noreferrer"
     );
 
-    if (!popup) {
+    if (!tab) {
       setSessionError(
-        `Popup was blocked. Allow popups and try again, or open the provider directly.`
+        "Could not open provider. Allow popups for this site and try again."
       );
+      return;
     }
+
+    // Subscribe to Realtime updates for this session
+    setTxPhase("waiting");
+    setTxStatus(null);
+    subscribeToTransaction(session.externalSessionId);
   }, [
     mode, selectedQuote, selectedCountry, selectedFiatCurrency,
     selectedCrypto, selectedPaymentMethod, amount, walletAddress, createSession,
@@ -380,6 +451,9 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       sessionError,
       handleBuyOrSell,
       currentLimit,
+      txPhase,
+      txStatus,
+      resetTransaction,
     }),
     [
       mode, selectedCountry, selectedFiatCurrency, selectedCrypto,
@@ -389,6 +463,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       isLoadingCountries, loadingFiat, loadingCrypto, loadingPayments,
       isLoadingQuotes, isCreatingSession, quoteError, sessionError,
       handleBuyOrSell, handleSetAmount, currentLimit,
+      txPhase, txStatus,
     ]
   );
 
