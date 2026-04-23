@@ -17,6 +17,7 @@ import type { Transaction } from "@/lib/meld/types";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  initialTxId?: string | null;
 }
 
 function formatAmount(value: number | null | undefined): string {
@@ -304,7 +305,7 @@ function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
 
 // ── Main modal ────────────────────────────────────────────────────────────────
 
-export function TransactionHistoryModal({ isOpen, onClose }: Props) {
+export function TransactionHistoryModal({ isOpen, onClose, initialTxId }: Props) {
   const { walletAddress } = useWidget();
 
   const [walletInput, setWalletInput] = useState(walletAddress);
@@ -323,15 +324,16 @@ export function TransactionHistoryModal({ isOpen, onClose }: Props) {
 
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  // Sync wallet address + reset view when modal opens/closes
+  // Sync wallet address + set initial tx when modal opens; reset on close
   useEffect(() => {
     if (isOpen) {
       setWalletInput(walletAddress);
       setDebouncedWallet(walletAddress);
+      if (initialTxId) setSelectedTxId(initialTxId);
     } else {
       setSelectedTxId(null);
     }
-  }, [isOpen, walletAddress]);
+  }, [isOpen, walletAddress, initialTxId]);
 
   const { tokens } = useTheme();
 

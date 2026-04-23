@@ -11,8 +11,6 @@ import { WalletAddressInput } from "./WalletAddressInput";
 import { PaymentMethodSelect } from "./PaymentMethodSelect";
 import { SubmitButton } from "./SubmitButton";
 import { PoweredByFooter } from "./PoweredByFooter";
-import { TransactionStatusView } from "./TransactionStatusView";
-import { TransactionHistoryView } from "./TransactionHistoryView";
 
 // Modals
 import { CountryModal } from "@/components/modals/CountryModal";
@@ -30,7 +28,6 @@ import { useWidget } from "@/contexts/WidgetContext";
 // =============================================================================
 
 type ModalType = "country" | "fiatCurrency" | "crypto" | "provider" | "paymentMethod" | "history" | null;
-type InnerView = "status" | "history";
 
 const WAITING_STATUS_LABELS: Record<string, string> = {
   PENDING_CREATED: "Transaction created",
@@ -45,17 +42,12 @@ export function MeldWidget() {
   const [openModal, setOpenModal] = useState<ModalType>(null);
   const closeModal = () => setOpenModal(null);
 
-  // Inner navigation state (only relevant when txPhase === "active")
-  const [innerView, setInnerView] = useState<InnerView>("status");
-  const [historySelectedTxId, setHistorySelectedTxId] = useState<string | null>(null);
-
   const isBuy = mode === "BUY";
 
-  // Reset inner view when entering active phase
+  // Open history modal on the tx detail when provider redirects back
   useEffect(() => {
     if (txPhase === "active") {
-      setInnerView("status");
-      setHistorySelectedTxId(null);
+      setOpenModal("history");
     }
   }, [txPhase]);
 
@@ -73,58 +65,42 @@ export function MeldWidget() {
       }}
     >
 
-      {/* ── Active phase: status or history view ── */}
-      {txPhase === "active" && (
-        <div style={{ minHeight: "456px", display: "flex", flexDirection: "column" }}>
-          {innerView === "history" ? (
-            <TransactionHistoryView
-              onSelectTx={(id) => { setHistorySelectedTxId(id); setInnerView("status"); }}
-              onNew={resetTransaction}
-            />
-          ) : (
-            <TransactionStatusView
-              txId={historySelectedTxId ?? txId}
-              onBack={() => { setHistorySelectedTxId(null); setInnerView("history"); }}
-              onNew={resetTransaction}
-            />
-          )}
-        </div>
-      )}
+      {/* ── Widget form — always visible ── */}
+      <>
+        <WidgetHeader onOpenCountryModal={() => setOpenModal("country")} />
 
-      {/* ── Idle / waiting: widget form ── */}
-      {txPhase !== "active" && (
-        <>
-          <WidgetHeader onOpenCountryModal={() => setOpenModal("country")} />
+        <AmountSection
+          variant="source"
+          onOpenSelector={() => setOpenModal(isBuy ? "fiatCurrency" : "crypto")}
+        />
 
-          <AmountSection
-            variant="source"
-            onOpenSelector={() => setOpenModal(isBuy ? "fiatCurrency" : "crypto")}
-          />
+        <AmountSection
+          variant="destination"
+          onOpenSelector={() => setOpenModal(isBuy ? "crypto" : "fiatCurrency")}
+        />
 
-          <AmountSection
-            variant="destination"
-            onOpenSelector={() => setOpenModal(isBuy ? "crypto" : "fiatCurrency")}
-          />
+        <ProviderCard onOpenProviderModal={() => setOpenModal("provider")} />
 
-          <ProviderCard onOpenProviderModal={() => setOpenModal("provider")} />
+        <WalletAddressInput onOpenHistory={() => setOpenModal("history")} />
 
-          <WalletAddressInput onOpenHistory={() => setOpenModal("history")} />
+        <PaymentMethodSelect onOpenModal={() => setOpenModal("paymentMethod")} />
 
-          <PaymentMethodSelect onOpenModal={() => setOpenModal("paymentMethod")} />
+        <SubmitButton />
 
-          <SubmitButton />
+        <PoweredByFooter />
 
-          <PoweredByFooter />
-
-          {/* Modals */}
-          <CountryModal isOpen={openModal === "country"} onClose={closeModal} />
-          <CurrencyModal isOpen={openModal === "fiatCurrency"} onClose={closeModal} />
-          <CryptoModal isOpen={openModal === "crypto"} onClose={closeModal} />
-          <ProviderModal isOpen={openModal === "provider"} onClose={closeModal} />
-          <PaymentMethodModal isOpen={openModal === "paymentMethod"} onClose={closeModal} />
-          <TransactionHistoryModal isOpen={openModal === "history"} onClose={closeModal} />
-        </>
-      )}
+        {/* Modals */}
+        <CountryModal isOpen={openModal === "country"} onClose={closeModal} />
+        <CurrencyModal isOpen={openModal === "fiatCurrency"} onClose={closeModal} />
+        <CryptoModal isOpen={openModal === "crypto"} onClose={closeModal} />
+        <ProviderModal isOpen={openModal === "provider"} onClose={closeModal} />
+        <PaymentMethodModal isOpen={openModal === "paymentMethod"} onClose={closeModal} />
+        <TransactionHistoryModal
+          isOpen={openModal === "history"}
+          onClose={() => { closeModal(); resetTransaction(); }}
+          initialTxId={txPhase === "active" ? txId : null}
+        />
+      </>
 
       {/* ── Waiting overlay — blurs widget, early statuses only ── */}
       {txPhase === "waiting" && (
