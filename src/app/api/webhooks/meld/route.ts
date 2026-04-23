@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
   const serverSupabase = createServerClient();
   await serverSupabase.from("transactions").insert({
     session_id: event.payload.externalSessionId,
+    customer_id: event.payload.externalCustomerId ?? null,
     event_type: event.eventType,
     event_id: event.eventId,
     transaction_id: event.payload.paymentTransactionId ?? null,

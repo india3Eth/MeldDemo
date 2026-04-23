@@ -11,6 +11,7 @@ import { WalletAddressInput } from "./WalletAddressInput";
 import { PaymentMethodSelect } from "./PaymentMethodSelect";
 import { SubmitButton } from "./SubmitButton";
 import { PoweredByFooter } from "./PoweredByFooter";
+import { TransactionsView } from "./TransactionsView";
 
 // Modals
 import { CountryModal } from "@/components/modals/CountryModal";
@@ -55,91 +56,8 @@ export function MeldWidget() {
 
   const isBuy = mode === "BUY";
 
-  // ── Transaction status overlay ─────────────────────────────────────
-  if (txPhase !== "idle") {
-    return (
-      <div
-        className="relative w-full max-w-[420px]"
-        style={{
-          background: tokens.widgetBg,
-          border: tokens.widgetBorder,
-          borderRadius: tokens.widgetRadius,
-          boxShadow: tokens.widgetShadow,
-          backdropFilter: tokens.widgetBackdrop,
-          padding: "48px 32px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          textAlign: "center",
-          gap: "12px",
-        }}
-      >
-        {txPhase === "waiting" && (
-          <>
-            <div style={{ fontSize: "32px" }}>⏳</div>
-            <div style={{ color: tokens.textPrimary, fontSize: "17px", fontWeight: 600 }}>
-              Completing your transaction
-            </div>
-            <div style={{ color: tokens.textMuted, fontSize: "13px" }}>
-              {txStatus
-                ? (STATUS_LABELS[txStatus] ?? txStatus)
-                : "Waiting for provider..."}
-            </div>
-            <div style={{ color: tokens.textMuted, fontSize: "11px", marginTop: "4px" }}>
-              Complete the payment in the provider tab
-            </div>
-            <button
-              onClick={resetTransaction}
-              className="mt-4 w-full rounded-xl py-3 text-[15px] font-semibold transition-all duration-200"
-              style={{ background: "transparent", color: tokens.textMuted, border: `1.5px solid ${tokens.dividerColor}`, cursor: "pointer" }}
-            >
-              Cancel
-            </button>
-          </>
-        )}
-
-        {txPhase === "complete" && (
-          <>
-            <div style={{ fontSize: "32px" }}>✅</div>
-            <div style={{ color: tokens.textPrimary, fontSize: "17px", fontWeight: 600 }}>
-              Transaction complete
-            </div>
-            <div style={{ color: tokens.textMuted, fontSize: "13px" }}>
-              Your crypto is on its way
-            </div>
-            <button
-              onClick={resetTransaction}
-              className="mt-4 w-full rounded-xl py-3 text-[15px] font-semibold transition-all duration-200"
-              style={{ background: tokens.accentBg, color: tokens.accentText, border: "none", cursor: "pointer" }}
-            >
-              Start new transaction
-            </button>
-          </>
-        )}
-
-        {(txPhase === "failed" || txPhase === "timeout") && (
-          <>
-            <div style={{ fontSize: "32px" }}>❌</div>
-            <div style={{ color: "#f87171", fontSize: "17px", fontWeight: 600 }}>
-              {txPhase === "timeout" ? "Taking longer than expected" : "Transaction failed"}
-            </div>
-            <div style={{ color: tokens.textMuted, fontSize: "13px" }}>
-              {txPhase === "timeout"
-                ? "Check your email for updates from the provider."
-                : (txStatus ? (STATUS_LABELS[txStatus] ?? txStatus) : "The transaction could not be completed.")}
-            </div>
-            <button
-              onClick={resetTransaction}
-              className="mt-4 w-full rounded-xl py-3 text-[15px] font-semibold transition-all duration-200"
-              style={{ background: tokens.accentBg, color: tokens.accentText, border: "none", cursor: "pointer" }}
-            >
-              Try again
-            </button>
-          </>
-        )}
-      </div>
-    );
-  }
+  // ── Complete / failed / timeout → show TransactionsView inside widget ──
+  const showHistory = txPhase === "complete" || txPhase === "failed" || txPhase === "timeout";
 
   return (
     <div
@@ -151,40 +69,100 @@ export function MeldWidget() {
         boxShadow: tokens.widgetShadow,
         backdropFilter: tokens.widgetBackdrop,
         padding: "32px",
+        minHeight: "520px",
       }}
     >
-      <WidgetHeader onOpenCountryModal={() => setOpenModal("country")} />
+      {/* ── Main widget form (always rendered, hidden under overlay / history) ── */}
+      {showHistory ? (
+        <TransactionsView />
+      ) : (
+        <>
+          <WidgetHeader onOpenCountryModal={() => setOpenModal("country")} />
 
-      <AmountSection
-        variant="source"
-        onOpenSelector={() =>
-          setOpenModal(isBuy ? "fiatCurrency" : "crypto")
-        }
-      />
+          <AmountSection
+            variant="source"
+            onOpenSelector={() =>
+              setOpenModal(isBuy ? "fiatCurrency" : "crypto")
+            }
+          />
 
-      <AmountSection
-        variant="destination"
-        onOpenSelector={() =>
-          setOpenModal(isBuy ? "crypto" : "fiatCurrency")
-        }
-      />
+          <AmountSection
+            variant="destination"
+            onOpenSelector={() =>
+              setOpenModal(isBuy ? "crypto" : "fiatCurrency")
+            }
+          />
 
-      <ProviderCard onOpenProviderModal={() => setOpenModal("provider")} />
+          <ProviderCard onOpenProviderModal={() => setOpenModal("provider")} />
 
-      <WalletAddressInput />
+          <WalletAddressInput />
 
-      <PaymentMethodSelect onOpenModal={() => setOpenModal("paymentMethod")} />
+          <PaymentMethodSelect onOpenModal={() => setOpenModal("paymentMethod")} />
 
-      <SubmitButton />
+          <SubmitButton />
 
-      <PoweredByFooter />
+          <PoweredByFooter />
 
-      {/* Modals — inside widget, slide up from bottom */}
-      <CountryModal isOpen={openModal === "country"} onClose={closeModal} />
-      <CurrencyModal isOpen={openModal === "fiatCurrency"} onClose={closeModal} />
-      <CryptoModal isOpen={openModal === "crypto"} onClose={closeModal} />
-      <ProviderModal isOpen={openModal === "provider"} onClose={closeModal} />
-      <PaymentMethodModal isOpen={openModal === "paymentMethod"} onClose={closeModal} />
+          {/* Modals — inside widget, slide up from bottom */}
+          <CountryModal isOpen={openModal === "country"} onClose={closeModal} />
+          <CurrencyModal isOpen={openModal === "fiatCurrency"} onClose={closeModal} />
+          <CryptoModal isOpen={openModal === "crypto"} onClose={closeModal} />
+          <ProviderModal isOpen={openModal === "provider"} onClose={closeModal} />
+          <PaymentMethodModal isOpen={openModal === "paymentMethod"} onClose={closeModal} />
+        </>
+      )}
+
+      {/* ── Waiting overlay — blurs widget, sits on top ── */}
+      {txPhase === "waiting" && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: tokens.widgetRadius,
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            background: "rgba(0,0,0,0.35)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            padding: "32px",
+            textAlign: "center",
+            zIndex: 10,
+          }}
+        >
+          <div style={{ fontSize: "32px" }}>⏳</div>
+          <div style={{ color: "#ffffff", fontSize: "17px", fontWeight: 600 }}>
+            Completing your transaction
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "13px" }}>
+            {txStatus
+              ? (STATUS_LABELS[txStatus] ?? txStatus)
+              : "Waiting for provider..."}
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "11px", marginTop: "2px" }}>
+            Complete the payment in the provider tab
+          </div>
+          <button
+            onClick={resetTransaction}
+            style={{
+              marginTop: "16px",
+              width: "100%",
+              borderRadius: "12px",
+              padding: "12px 0",
+              fontSize: "15px",
+              fontWeight: 600,
+              background: "transparent",
+              color: "rgba(255,255,255,0.6)",
+              border: "1.5px solid rgba(255,255,255,0.25)",
+              cursor: "pointer",
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }
