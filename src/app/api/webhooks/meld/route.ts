@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { WebhookEvent } from "@/lib/meld/types";
+import { createServerClient } from "@/lib/supabase";
 
 // =============================================================================
 // Meld Webhook Handler
@@ -45,6 +46,17 @@ export async function POST(req: NextRequest) {
 
   // Parse the verified event
   const event: WebhookEvent = JSON.parse(rawBody);
+
+  // Persist to Supabase — powers Realtime subscription on the frontend
+  const serverSupabase = createServerClient();
+  await serverSupabase.from("transactions").insert({
+    session_id: event.payload.externalSessionId,
+    event_type: event.eventType,
+    event_id: event.eventId,
+    transaction_id: event.payload.paymentTransactionId ?? null,
+    status: event.payload.paymentTransactionStatus,
+    raw_event: event,
+  });
 
   // Handle the event based on type
   await handleWebhookEvent(event);
@@ -127,7 +139,5 @@ async function handleWebhookEvent(event: WebhookEvent): Promise<void> {
       break;
   }
 
-  // TODO: Persist event to your database
-  // TODO: Notify connected clients via WebSocket/SSE
   // TODO: Send email/push notifications for completed/failed transactions
 }
