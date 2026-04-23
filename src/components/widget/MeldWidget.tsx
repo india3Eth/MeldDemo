@@ -88,6 +88,13 @@ export function MeldWidget() {
             <div style={{ color: tokens.textMuted, fontSize: "11px", marginTop: "4px" }}>
               Complete the payment in the provider tab
             </div>
+            <button
+              onClick={resetTransaction}
+              className="mt-4 w-full rounded-xl py-3 text-[15px] font-semibold transition-all duration-200"
+              style={{ background: "transparent", color: tokens.textMuted, border: `1.5px solid ${tokens.dividerColor}`, cursor: "pointer" }}
+            >
+              Cancel
+            </button>
           </>
         )}
 
