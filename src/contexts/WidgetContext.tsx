@@ -38,7 +38,7 @@ import { useServiceProviders } from "@/hooks/use-service-providers";
 // Widget Context — single source of truth for all widget state
 // =============================================================================
 
-type TransactionPhase = "idle" | "waiting" | "complete" | "failed" | "timeout";
+type TransactionPhase = "idle" | "waiting" | "active";
 
 interface WidgetState {
   mode: SessionType;
@@ -81,6 +81,7 @@ interface WidgetState {
 
   txPhase: TransactionPhase;
   txStatus: string | null;
+  txId: string | null;
   resetTransaction: () => void;
 }
 
@@ -95,6 +96,10 @@ export function useWidget(): WidgetState {
 // ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
+
+const WAITING_STATUSES = new Set(["PENDING_CREATED", "PENDING", "TWO_FA_REQUIRED", "TWO_FA_PROVIDED"]);
+const TERMINAL_STATUSES = new Set(["SETTLED", "FAILED", "DECLINED", "CANCELLED", "REFUNDED"]);
+const POLL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 export function WidgetProvider({ children }: { children: ReactNode }) {
   // ── Core state ───────────────────────────────────────────────────────
@@ -114,10 +119,8 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
   // ── Transaction tracking (Supabase Realtime) ─────────────────────────
   const [txPhase, setTxPhase] = useState<TransactionPhase>("idle");
   const [txStatus, setTxStatus] = useState<string | null>(null);
+  const [txId, setTxId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
-
-  const TERMINAL_STATUSES = new Set(["SETTLED", "FAILED", "DECLINED", "CANCELLED", "REFUNDED"]);
-  const POLL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
   function unsubscribe() {
     if (channelRef.current) {
@@ -130,6 +133,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     unsubscribe();
     setTxPhase("idle");
     setTxStatus(null);
+    setTxId(null);
   }
 
   function subscribeToTransaction(sessionId: string) {
@@ -137,29 +141,37 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
 
     const timeoutId = setTimeout(() => {
       unsubscribe();
-      setTxPhase("timeout");
+      setTxPhase("active"); // timeout → go to status page regardless
     }, POLL_TIMEOUT_MS);
+
+    const handlePayload = (payload: { new: Record<string, unknown> }) => {
+      const status = payload.new.status as string;
+      const incomingTxId = payload.new.transaction_id as string | null;
+
+      setTxStatus(status);
+      if (incomingTxId) setTxId(incomingTxId);
+
+      if (WAITING_STATUSES.has(status)) return; // stay on overlay
+
+      if (status === "SETTLING") {
+        // Dismiss overlay, show status page; keep subscription alive for terminal update
+        setTxPhase("active");
+        return;
+      }
+
+      if (TERMINAL_STATUSES.has(status)) {
+        clearTimeout(timeoutId);
+        unsubscribe();
+        setTxPhase("active");
+      }
+    };
+
+    const filter = { schema: "public", table: "transactions", filter: `session_id=eq.${sessionId}` };
 
     const channel = supabase
       .channel(`tx:${sessionId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "transactions",
-          filter: `session_id=eq.${sessionId}`,
-        },
-        (payload) => {
-          const status: string = payload.new.status;
-          setTxStatus(status);
-          if (TERMINAL_STATUSES.has(status)) {
-            clearTimeout(timeoutId);
-            unsubscribe();
-            setTxPhase(status === "SETTLED" ? "complete" : "failed");
-          }
-        }
-      )
+      .on("postgres_changes", { event: "INSERT", ...filter }, handlePayload)
+      .on("postgres_changes", { event: "UPDATE", ...filter }, handlePayload)
       .subscribe();
 
     channelRef.current = channel;
@@ -188,6 +200,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     unsubscribe();
     setTxPhase("idle");
     setTxStatus(null);
+    setTxId(null);
   }, [mode]);
 
 
@@ -448,6 +461,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       currentLimit,
       txPhase,
       txStatus,
+      txId,
       resetTransaction,
     }),
     [
@@ -458,7 +472,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       isLoadingCountries, loadingFiat, loadingCrypto, loadingPayments,
       isLoadingQuotes, isCreatingSession, quoteError, sessionError,
       handleBuyOrSell, handleSetAmount, currentLimit,
-      txPhase, txStatus,
+      txPhase, txStatus, txId,
     ]
   );
 
