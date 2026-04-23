@@ -296,6 +296,22 @@ export interface TransactionCustomer {
   name: { firstName: string; lastName: string };
 }
 
+export interface CryptoDetails {
+  sourceWalletAddress: string | null;
+  destinationWalletAddress: string | null;
+  sessionWalletAddress: string | null;
+  networkFee: number | null;
+  transactionFee: number | null;
+  partnerFee: number | null;
+  totalFee: number | null;
+  networkFeeInUsd: number | null;
+  transactionFeeInUsd: number | null;
+  partnerFeeInUsd: number | null;
+  totalFeeInUsd: number | null;
+  blockchainTransactionId: string | null;
+  chainId: string | null;
+}
+
 export interface Transaction {
   id: string;
   accountId: string;
@@ -308,6 +324,7 @@ export interface Transaction {
   sourceCurrencyCode: string;
   destinationAmount: number;
   destinationCurrencyCode: string;
+  paymentMethodType: string | null;
   countryCode: string;
   customer: TransactionCustomer;
   externalCustomerId: string;
@@ -318,6 +335,8 @@ export interface Transaction {
   isImported: boolean;
   isPassthrough: boolean;
   serviceTransactionId: string;
+  cryptoDetails: CryptoDetails | null;
+  description: string | null;
 }
 
 export interface TransactionSearchResponse {

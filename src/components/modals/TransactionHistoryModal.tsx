@@ -118,32 +118,78 @@ function SkeletonRow() {
   );
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatTxType(type: string | null | undefined): string {
+  if (!type) return "—";
+  return type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatPaymentMethod(pm: string | null | undefined): string {
+  if (!pm) return "—";
+  return pm.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function truncateHash(hash: string): string {
+  return `${hash.slice(0, 10)}…${hash.slice(-8)}`;
+}
+
+// ── Reusable detail row ───────────────────────────────────────────────────────
+
+function DetailRow({
+  label, value, custom, last = false,
+}: {
+  label: string; value?: string | null; custom?: React.ReactNode; last?: boolean;
+}) {
+  const { tokens } = useTheme();
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      padding: "9px 14px",
+      borderBottom: last ? "none" : `1px solid ${tokens.dividerColor}`,
+    }}>
+      <span style={{ color: tokens.textMuted, fontSize: "12px", flexShrink: 0 }}>{label}</span>
+      {custom ?? (
+        <span style={{ color: tokens.textPrimary, fontSize: "12px", fontWeight: 500, textAlign: "right", maxWidth: "60%" }}>
+          {value ?? "—"}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ── Detail view for a single transaction ─────────────────────────────────────
 
 function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
   const { tokens } = useTheme();
   const { data: tx, isLoading } = useTransaction(txId);
-  const [copied, setCopied] = useState(false);
+  const [copiedHash, setCopiedHash] = useState(false);
 
   const status = tx?.status ?? null;
   const cfg = status ? (STATUS_CONFIG[status] ?? { label: status, color: "#6b7280", bg: "#f3f4f6" }) : null;
+  const statusIcon = status === "SETTLED" ? "✓" : (status === "FAILED" || status === "DECLINED") ? "✕" : "↻";
 
-  function copyId() {
-    if (!tx?.id) return;
-    navigator.clipboard.writeText(tx.id).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+  const crypto = tx?.cryptoDetails ?? null;
+  const blockchainHash = crypto?.blockchainTransactionId ?? null;
+  const totalFeeUsd = crypto?.totalFeeInUsd ?? null;
+  const destWallet = crypto?.destinationWalletAddress ?? tx?.externalCustomerId ?? null;
+
+  function copyHash() {
+    if (!blockchainHash) return;
+    navigator.clipboard.writeText(blockchainHash).then(() => {
+      setCopiedHash(true);
+      setTimeout(() => setCopiedHash(false), 1500);
     });
   }
 
   if (isLoading && !tx) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-        {[60, 100, 48, 48, 48].map((h, i) => (
+        {[60, 100, 48, 48, 48, 48, 48].map((h, i) => (
           <div key={i} style={{
             height: `${h}px`, borderRadius: "10px",
             background: "linear-gradient(90deg, rgba(128,128,128,0.08) 25%, rgba(128,128,128,0.15) 50%, rgba(128,128,128,0.08) 75%)",
-            backgroundSize: "600px 100%", animation: `shimmer 1.4s infinite linear`,
+            backgroundSize: "600px 100%", animation: "shimmer 1.4s infinite linear",
             animationDelay: `${i * 0.1}s`,
           }} />
         ))}
@@ -152,12 +198,12 @@ function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
       <style>{`
         @keyframes shimmer { 0% { background-position: -300px 0; } 100% { background-position: 300px 0; } }
       `}</style>
 
-      {/* Back button */}
+      {/* Back */}
       <button
         onClick={onBack}
         style={{
@@ -178,62 +224,78 @@ function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
             background: cfg.bg, display: "flex", alignItems: "center",
             justifyContent: "center", fontSize: "18px", fontWeight: 700, color: cfg.color,
           }}>
-            {status === "SETTLED" ? "✓" : status === "FAILED" || status === "DECLINED" ? "✕" : "↻"}
+            {statusIcon}
           </div>
           <div style={{ color: cfg.color, fontSize: "13px", fontWeight: 600 }}>{cfg.label}</div>
         </div>
       )}
 
-      {/* Amount display */}
+      {/* Amount hero */}
       {tx && (
         <div style={{
           textAlign: "center", padding: "14px",
           background: tokens.sectionBg, border: tokens.sectionBorder, borderRadius: tokens.sectionRadius,
         }}>
-          <div style={{ color: tokens.textPrimary, fontSize: "20px", fontWeight: 700, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
-            {formatAmount(tx.sourceAmount)} {tx.sourceCurrencyCode ?? ""}
+          <div style={{ color: tokens.textPrimary, fontSize: "22px", fontWeight: 700, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.02em" }}>
+            {formatAmount(tx.sourceAmount)} {tx.sourceCurrencyCode}
           </div>
           <div style={{ color: tokens.textMuted, fontSize: "12px", margin: "3px 0" }}>→</div>
-          <div style={{ color: tokens.textPrimary, fontSize: "16px", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
-            {formatAmount(tx.destinationAmount)} {tx.destinationCurrencyCode ?? ""}
+          <div style={{ color: tokens.textPrimary, fontSize: "17px", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+            {formatAmount(tx.destinationAmount)} {tx.destinationCurrencyCode}
           </div>
         </div>
       )}
 
-      {/* Detail rows */}
+      {/* Transaction details card */}
       {tx && (
         <div style={{ background: tokens.sectionBg, border: tokens.sectionBorder, borderRadius: tokens.sectionRadius, overflow: "hidden" }}>
-          {[
-            tx.serviceProvider ? { label: "Provider", value: tx.serviceProvider } : null,
-            tx.destinationCurrencyCode ? { label: "Asset", value: tx.destinationCurrencyCode } : null,
-            tx.createdAt ? { label: "Date", value: formatDate(tx.createdAt) } : null,
-            tx.status ? { label: "Status", value: null, custom: <StatusBadge status={tx.status} /> } : null,
-            tx.id ? {
-              label: "TX ID", value: null,
-              custom: (
-                <button onClick={copyId} title={tx.id} style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  color: tokens.textSecondary, fontSize: "11px",
-                  fontFamily: "monospace", display: "flex", alignItems: "center", gap: "4px",
+          <DetailRow label="Provider" value={tx.serviceProvider} />
+          <DetailRow label="Type" value={formatTxType(tx.transactionType)} />
+          {tx.paymentMethodType && (
+            <DetailRow label="Payment" value={formatPaymentMethod(tx.paymentMethodType)} />
+          )}
+          <DetailRow label="Date" value={formatDate(tx.createdAt)} />
+          <DetailRow
+            label="Status"
+            custom={<StatusBadge status={tx.status} />}
+          />
+          {totalFeeUsd != null && (
+            <DetailRow label="Total Fee" value={`$${totalFeeUsd.toFixed(2)} USD`} />
+          )}
+          {destWallet && (
+            <DetailRow
+              label="Wallet"
+              custom={
+                <span style={{
+                  color: tokens.textSecondary, fontSize: "11px", fontFamily: "monospace",
+                  maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis",
+                  whiteSpace: "nowrap", display: "inline-block",
                 }}>
-                  {tx.id.slice(0, 10)}…{tx.id.slice(-6)}
-                  <span style={{ fontSize: "10px", opacity: 0.6 }}>{copied ? "✓ Copied" : "📋"}</span>
+                  {destWallet.length > 18 ? `${destWallet.slice(0, 8)}…${destWallet.slice(-6)}` : destWallet}
+                </span>
+              }
+            />
+          )}
+          {blockchainHash && (
+            <DetailRow
+              label="TX Hash"
+              last
+              custom={
+                <button
+                  onClick={copyHash}
+                  title={blockchainHash}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: tokens.textSecondary, fontSize: "11px",
+                    fontFamily: "monospace", display: "flex", alignItems: "center", gap: "4px",
+                  }}
+                >
+                  {truncateHash(blockchainHash)}
+                  <span style={{ fontSize: "10px", opacity: 0.6 }}>{copiedHash ? "✓" : "📋"}</span>
                 </button>
-              ),
-            } : null,
-          ].filter(Boolean).map((row, i, arr) => {
-            const r = row as { label: string; value: string | null; custom?: React.ReactNode };
-            return (
-              <div key={r.label} style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                padding: "9px 14px",
-                borderBottom: i < arr.length - 1 ? `1px solid ${tokens.dividerColor}` : "none",
-              }}>
-                <span style={{ color: tokens.textMuted, fontSize: "12px" }}>{r.label}</span>
-                {r.custom ?? <span style={{ color: tokens.textPrimary, fontSize: "12px", fontWeight: 500 }}>{r.value}</span>}
-              </div>
-            );
-          })}
+              }
+            />
+          )}
         </div>
       )}
     </div>
