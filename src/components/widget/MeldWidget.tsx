@@ -94,10 +94,7 @@ export function MeldWidget() {
       {/* ── Idle / waiting: widget form ── */}
       {txPhase !== "active" && (
         <>
-          <WidgetHeader
-            onOpenCountryModal={() => setOpenModal("country")}
-            onOpenHistory={() => setOpenModal("history")}
-          />
+          <WidgetHeader onOpenCountryModal={() => setOpenModal("country")} />
 
           <AmountSection
             variant="source"
@@ -111,7 +108,7 @@ export function MeldWidget() {
 
           <ProviderCard onOpenProviderModal={() => setOpenModal("provider")} />
 
-          <WalletAddressInput />
+          <WalletAddressInput onOpenHistory={() => setOpenModal("history")} />
 
           <PaymentMethodSelect onOpenModal={() => setOpenModal("paymentMethod")} />
 

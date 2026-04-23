@@ -31,7 +31,11 @@ function validateAddress(address: string, chainCode?: string): boolean {
   }
 }
 
-export function WalletAddressInput() {
+interface WalletAddressInputProps {
+  onOpenHistory: () => void;
+}
+
+export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
   const { walletAddress, setWalletAddress, mode, selectedCrypto } = useWidget();
   const { tokens } = useTheme();
 
@@ -39,7 +43,6 @@ export function WalletAddressInput() {
   const isEmpty = !walletAddress.trim();
   const isInvalid = !isEmpty && !validateAddress(walletAddress, selectedCrypto?.chainCode);
 
-  // Fix #6: red border only in BUY when empty; invalid format warning always
   const borderStyle = isInvalid
     ? "1px solid #fca5a5"
     : isEmpty && isBuy
@@ -54,21 +57,46 @@ export function WalletAddressInput() {
       >
         {isBuy ? "Wallet Address" : "Wallet Address (optional)"}
       </label>
-      <input
-        type="text"
-        placeholder="Enter wallet address to proceed"
-        value={walletAddress}
-        onChange={(e) => setWalletAddress(e.target.value)}
-        className="w-full text-sm outline-none transition-all duration-200"
+
+      {/* Input + inline history button */}
+      <div
+        className="flex items-center gap-2"
         style={{
-          padding: "15px",
           background: tokens.inputBg,
           border: borderStyle,
           borderRadius: tokens.inputRadius,
           boxShadow: tokens.inputShadow,
-          color: tokens.textPrimary,
+          padding: "8px 8px 8px 15px",
+          transition: "border-color 0.2s",
         }}
-      />
+      >
+        <input
+          type="text"
+          placeholder="Enter wallet address to proceed"
+          value={walletAddress}
+          onChange={(e) => setWalletAddress(e.target.value)}
+          className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+          style={{ color: tokens.textPrimary, border: "none" }}
+        />
+        <button
+          onClick={onOpenHistory}
+          style={{
+            flexShrink: 0,
+            background: tokens.pillBg,
+            border: tokens.pillBorder,
+            borderRadius: "8px",
+            padding: "6px 10px",
+            fontSize: "11px",
+            fontWeight: 600,
+            color: tokens.textSecondary,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          History
+        </button>
+      </div>
+
       {isInvalid && (
         <p className="mt-1.5 text-[11px] text-red-400">
           Invalid {selectedCrypto?.chainCode ?? ""} address format
