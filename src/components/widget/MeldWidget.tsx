@@ -74,18 +74,20 @@ export function MeldWidget() {
 
       {/* ── Active phase: status or history view ── */}
       {txPhase === "active" && (
-        innerView === "history" ? (
-          <TransactionHistoryView
-            onSelectTx={(id) => { setHistorySelectedTxId(id); setInnerView("status"); }}
-            onNew={resetTransaction}
-          />
-        ) : (
-          <TransactionStatusView
-            txId={historySelectedTxId ?? txId}
-            onBack={() => { setHistorySelectedTxId(null); setInnerView("history"); }}
-            onNew={resetTransaction}
-          />
-        )
+        <div style={{ minHeight: "456px", display: "flex", flexDirection: "column" }}>
+          {innerView === "history" ? (
+            <TransactionHistoryView
+              onSelectTx={(id) => { setHistorySelectedTxId(id); setInnerView("status"); }}
+              onNew={resetTransaction}
+            />
+          ) : (
+            <TransactionStatusView
+              txId={historySelectedTxId ?? txId}
+              onBack={() => { setHistorySelectedTxId(null); setInnerView("history"); }}
+              onNew={resetTransaction}
+            />
+          )}
+        </div>
       )}
 
       {/* ── Idle / waiting: widget form ── */}

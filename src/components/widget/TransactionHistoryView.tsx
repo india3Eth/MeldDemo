@@ -17,7 +17,8 @@ interface Props {
   onNew: () => void;
 }
 
-function formatAmount(value: number): string {
+function formatAmount(value: number | null | undefined): string {
+  if (value == null || isNaN(value)) return "—";
   return parseFloat(value.toFixed(6)).toString();
 }
 
@@ -93,9 +94,9 @@ function TxRow({ tx, tokens, onClick }: { tx: Transaction; tokens: ThemeTokens; 
           fontVariantNumeric: "tabular-nums",
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
         }}>
-          {formatAmount(tx.sourceAmount)} {tx.sourceCurrencyCode}
+          {formatAmount(tx.sourceAmount)} {tx.sourceCurrencyCode ?? ""}
           <span style={{ color: tokens.textMuted, fontWeight: 400 }}> → </span>
-          {formatAmount(tx.destinationAmount)} {tx.destinationCurrencyCode}
+          {formatAmount(tx.destinationAmount)} {tx.destinationCurrencyCode ?? ""}
         </div>
         <div style={{ color: tokens.textMuted, fontSize: "11px", marginTop: "2px" }}>
           {formatDate(tx.createdAt)} · {tx.serviceProvider}

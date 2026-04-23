@@ -16,7 +16,8 @@ interface Props {
   onNew: () => void;
 }
 
-function formatAmount(value: number): string {
+function formatAmount(value: number | null | undefined): string {
+  if (value == null || isNaN(value)) return "—";
   return parseFloat(value.toFixed(6)).toString();
 }
 
@@ -222,7 +223,7 @@ export function TransactionStatusView({ txId, onBack, onNew }: Props) {
                 padding: "16px",
                 background: tokens.sectionBg,
                 border: tokens.sectionBorder,
-                borderRadius: tokens.sectionRadius ?? "16px",
+                borderRadius: tokens.sectionRadius,
               }}>
                 <div style={{
                   color: tokens.textPrimary,
@@ -231,7 +232,7 @@ export function TransactionStatusView({ txId, onBack, onNew }: Props) {
                   fontVariantNumeric: "tabular-nums",
                   letterSpacing: "-0.02em",
                 }}>
-                  {formatAmount(tx.sourceAmount)} {tx.sourceCurrencyCode}
+                  {formatAmount(tx.sourceAmount)} {tx.sourceCurrencyCode ?? ""}
                 </div>
                 <div style={{ color: tokens.textMuted, fontSize: "13px", margin: "4px 0" }}>→</div>
                 <div style={{
@@ -240,7 +241,7 @@ export function TransactionStatusView({ txId, onBack, onNew }: Props) {
                   fontWeight: 600,
                   fontVariantNumeric: "tabular-nums",
                 }}>
-                  {formatAmount(tx.destinationAmount)} {tx.destinationCurrencyCode}
+                  {formatAmount(tx.destinationAmount)} {tx.destinationCurrencyCode ?? ""}
                 </div>
               </div>
             )}
@@ -250,19 +251,19 @@ export function TransactionStatusView({ txId, onBack, onNew }: Props) {
               <div style={{
                 background: tokens.sectionBg,
                 border: tokens.sectionBorder,
-                borderRadius: tokens.sectionRadius ?? "16px",
+                borderRadius: tokens.sectionRadius,
                 overflow: "hidden",
               }}>
                 {[
-                  { label: "Provider", value: tx.serviceProvider },
-                  tx.destinationCurrencyCode && { label: "Asset", value: tx.destinationCurrencyCode },
-                  { label: "Date", value: formatDate(tx.createdAt) },
-                  {
+                  tx.serviceProvider ? { label: "Provider", value: tx.serviceProvider } : null,
+                  tx.destinationCurrencyCode ? { label: "Asset", value: tx.destinationCurrencyCode } : null,
+                  tx.createdAt ? { label: "Date", value: formatDate(tx.createdAt) } : null,
+                  tx.status ? {
                     label: "Status",
                     value: null,
                     custom: <StatusBadge status={tx.status} />,
-                  },
-                  {
+                  } : null,
+                  tx.id ? {
                     label: "TX ID",
                     value: null,
                     custom: (
@@ -281,7 +282,7 @@ export function TransactionStatusView({ txId, onBack, onNew }: Props) {
                         </span>
                       </button>
                     ),
-                  },
+                  } : null,
                 ].filter(Boolean).map((row, i, arr) => {
                   const r = row as { label: string; value: string | null; custom?: React.ReactNode };
                   return (
