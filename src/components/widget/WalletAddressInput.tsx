@@ -93,7 +93,7 @@ export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
             whiteSpace: "nowrap",
           }}
         >
-          History
+          Tx History
         </button>
       </div>
 

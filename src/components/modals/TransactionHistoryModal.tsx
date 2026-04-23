@@ -261,10 +261,15 @@ export function TransactionHistoryModal({ isOpen, onClose }: Props) {
 
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  // Reset to list when modal closes
+  // Sync wallet address + reset view when modal opens/closes
   useEffect(() => {
-    if (!isOpen) setSelectedTxId(null);
-  }, [isOpen]);
+    if (isOpen) {
+      setWalletInput(walletAddress);
+      setDebouncedWallet(walletAddress);
+    } else {
+      setSelectedTxId(null);
+    }
+  }, [isOpen, walletAddress]);
 
   const { tokens } = useTheme();
 
