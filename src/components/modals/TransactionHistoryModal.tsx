@@ -163,8 +163,18 @@ function DetailRow({
 
 function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
   const { tokens } = useTheme();
-  const { data: tx, isLoading } = useTransaction(txId);
+  const { txStatus } = useWidget();
+  const { data: tx, isLoading, refetch } = useTransaction(txId);
   const [copiedHash, setCopiedHash] = useState(false);
+
+  // Re-fetch when Supabase Realtime fires a status update
+  const prevTxStatus = useRef(txStatus);
+  useEffect(() => {
+    if (txStatus !== prevTxStatus.current) {
+      prevTxStatus.current = txStatus;
+      refetch();
+    }
+  }, [txStatus, refetch]);
 
   const status = tx?.status ?? null;
   const cfg = status ? (STATUS_CONFIG[status] ?? { label: status, color: "#6b7280", bg: "#f3f4f6" }) : null;
@@ -306,15 +316,24 @@ function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
 // ── Main modal ────────────────────────────────────────────────────────────────
 
 export function TransactionHistoryModal({ isOpen, onClose, initialTxId }: Props) {
-  const { walletAddress } = useWidget();
+  const { walletAddress, txStatus } = useWidget();
 
   const [walletInput, setWalletInput] = useState(walletAddress);
   const [debouncedWallet, setDebouncedWallet] = useState(walletAddress);
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data, isLoading, error } = useTransactionList(debouncedWallet.trim() || null);
+  const { data, isLoading, error, refetch: refetchList } = useTransactionList(debouncedWallet.trim() || null);
   const transactions = data?.transactions ?? [];
+
+  // Re-fetch list when Supabase Realtime fires a status update
+  const prevListStatus = useRef(txStatus);
+  useEffect(() => {
+    if (txStatus !== prevListStatus.current) {
+      prevListStatus.current = txStatus;
+      refetchList();
+    }
+  }, [txStatus, refetchList]);
 
   function handleWalletChange(val: string) {
     setWalletInput(val);
