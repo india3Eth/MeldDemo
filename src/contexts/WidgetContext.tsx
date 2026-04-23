@@ -295,18 +295,13 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const tab = window.open(
+    // Note: window.open with noopener always returns null — cannot use return value
+    // to detect blocked popups. Open the tab and always proceed to show overlay.
+    window.open(
       session.serviceProviderWidgetUrl,
       "_blank",
       "noopener,noreferrer"
     );
-
-    if (!tab) {
-      setSessionError(
-        "Could not open provider. Allow popups for this site and try again."
-      );
-      return;
-    }
 
     // Subscribe to Realtime updates for this session
     setTxPhase("waiting");
