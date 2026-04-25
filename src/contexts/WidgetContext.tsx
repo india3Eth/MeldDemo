@@ -72,12 +72,18 @@ interface WidgetState {
   isLoadingCountries: boolean;
   isLoadingCurrencies: boolean;
   isLoadingQuotes: boolean;
+  isLoadingLimits: boolean;
+  isLoadingRefinedLimits: boolean;
   isCreatingSession: boolean;
   quoteError: string | null;
-  sessionError: string | null;
+
+  appError: { title: string; message: string } | null;
+  pushError: (title: string, message: string) => void;
+  clearError: () => void;
 
   handleBuyOrSell: () => Promise<void>;
   currentLimit: FiatCurrencyPurchaseLimit | CryptoCurrencySellLimit | null;
+  limitUnavailable: boolean;
 
   txPhase: TransactionPhase;
   txStatus: string | null;
@@ -110,8 +116,21 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [amount, setAmount] = useState("");
-  const [walletAddress, setWalletAddress] = useState("");
-  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [walletAddress, setWalletAddressRaw] = useState("");
+  const setWalletAddress = useCallback((addr: string) => {
+    setWalletAddressRaw(addr.toLowerCase());
+  }, []);
+
+  // ── Centralized error state ─────────────────────────────────────────
+  const [appError, setAppError] = useState<{ title: string; message: string } | null>(null);
+  const prevQuoteError = useRef<string | null>(null);
+  const pushError = useCallback((title: string, message: string) => {
+    setAppError({ title, message });
+  }, []);
+  const clearError = useCallback(() => {
+    setAppError(null);
+    prevQuoteError.current = null;
+  }, []);
 
   // Track whether user has manually edited the amount — if so, don't auto-set from limit default
   const userEditedAmount = useRef(false);
@@ -194,7 +213,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     setSelectedPaymentMethod(null);
     setSelectedQuote(null);
     setWalletAddress("");
-    setSessionError(null);
+    setAppError(null);
     setAmount("");
     userEditedAmount.current = false;
     unsubscribe();
@@ -261,8 +280,26 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
   );
 
   const cryptoCode = selectedCrypto?.currencyCode ?? null;
-  const { data: purchaseLimits } = usePurchaseLimits(countryCode, quoteProviders, fiatCode);
-  const { data: sellLimits } = useSellLimits(countryCode, quoteProviders, cryptoCode);
+  // Base limits — no provider filter, stable, never disappears
+  const { data: purchaseLimits, isLoading: isLoadingPurchaseLimits } = usePurchaseLimits(mode === "BUY" ? countryCode : null, null, fiatCode);
+  const { data: sellLimits, isLoading: isLoadingSellLimits } = useSellLimits(mode === "SELL" ? countryCode : null, null, cryptoCode);
+  const isLoadingLimits = mode === "BUY" ? isLoadingPurchaseLimits : isLoadingSellLimits;
+
+  // Refined limits — scoped to selected provider + payment method (fires once a quote is selected)
+  const selectedPaymentType = selectedPaymentMethod?.paymentMethod ?? null;
+  const { data: refinedPurchaseLimits, isLoading: isLoadingRefinedPurchase } = usePurchaseLimits(
+    mode === "BUY" && serviceProvider ? countryCode : null,
+    serviceProvider,
+    fiatCode,
+    selectedPaymentType
+  );
+  const { data: refinedSellLimits, isLoading: isLoadingRefinedSell } = useSellLimits(
+    mode === "SELL" && serviceProvider ? countryCode : null,
+    serviceProvider,
+    cryptoCode,
+    selectedPaymentType
+  );
+  const isLoadingRefinedLimits = mode === "BUY" ? isLoadingRefinedPurchase : isLoadingRefinedSell;
 
   // ── Session creation ─────────────────────────────────────────────────
   const { createSession, isLoading: isCreatingSession } = useSession();
@@ -270,7 +307,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
   // Fix #1 + #3: Surface session errors and popup-blocked state
   const handleBuyOrSell = useCallback(async () => {
     if (!selectedQuote || !selectedCountry || !selectedFiatCurrency || !selectedCrypto) return;
-    setSessionError(null);
+    setAppError(null);
 
     const isBuy = mode === "BUY";
     const redirectUrl = typeof window !== "undefined"
@@ -299,12 +336,12 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     });
 
     if (!session) {
-      setSessionError("Failed to create session. Please try again.");
+      pushError("Session Error", "Failed to create session. Please try again.");
       return;
     }
 
     if (!session.serviceProviderWidgetUrl) {
-      setSessionError("Provider did not return a widget URL. Try a different provider.");
+      pushError("Session Error", "Provider did not return a widget URL. Try a different provider.");
       return;
     }
 
@@ -322,7 +359,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     subscribeToTransaction(session.externalSessionId);
   }, [
     mode, selectedQuote, selectedCountry, selectedFiatCurrency,
-    selectedCrypto, selectedPaymentMethod, amount, walletAddress, createSession,
+    selectedCrypto, selectedPaymentMethod, amount, walletAddress, createSession, pushError,
   ]);
 
   // ── Auto-select defaults ────────────────────────────────────────────
@@ -391,39 +428,48 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
   }, [quotes]);
 
   // ── Current limit ───────────────────────────────────────────────────
+  // When a provider is selected:
+  //   - refined loading → show base (transition, don't flash)
+  //   - refined loaded + has data → show refined
+  //   - refined loaded + empty → null (unavailable for this combination)
+  // When no provider selected: show base
   const currentLimit = useMemo<FiatCurrencyPurchaseLimit | CryptoCurrencySellLimit | null>(() => {
-    if (mode === "BUY" && purchaseLimits?.length && selectedFiatCurrency) {
-      const limit = purchaseLimits.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode);
-      if (!limit) return null;
-      const providerLimits = quotes
-        .map((q) => limit.serviceProviderDetails?.[q.serviceProvider])
-        .filter((l): l is NonNullable<typeof l> => !!l);
-      if (providerLimits.length > 0) {
-        return {
-          ...limit,
-          minimumAmount: Math.min(...providerLimits.map((l) => l.minimumAmount)),
-          maximumAmount: Math.max(...providerLimits.map((l) => l.maximumAmount)),
-        };
+    if (mode === "BUY" && selectedFiatCurrency) {
+      if (serviceProvider) {
+        if (isLoadingRefinedLimits) {
+          // Still fetching refined — show base as placeholder
+          return purchaseLimits?.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode) ?? null;
+        }
+        // Refined fetch done — use it or null (don't fall back to base)
+        return refinedPurchaseLimits?.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode) ?? null;
       }
-      return limit;
+      return purchaseLimits?.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode) ?? null;
     }
-    if (mode === "SELL" && sellLimits?.length && selectedCrypto) {
-      const limit = sellLimits.find((l) => l.currencyCode === selectedCrypto.currencyCode);
-      if (!limit) return null;
-      const providerLimits = quotes
-        .map((q) => limit.serviceProviderDetails?.[q.serviceProvider])
-        .filter((l): l is NonNullable<typeof l> => !!l);
-      if (providerLimits.length > 0) {
-        return {
-          ...limit,
-          minimumAmount: Math.min(...providerLimits.map((l) => l.minimumAmount)),
-          maximumAmount: Math.max(...providerLimits.map((l) => l.maximumAmount)),
-        };
+    if (mode === "SELL" && selectedCrypto) {
+      if (serviceProvider) {
+        if (isLoadingRefinedLimits) {
+          return sellLimits?.find((l) => l.currencyCode === selectedCrypto.currencyCode) ?? null;
+        }
+        return refinedSellLimits?.find((l) => l.currencyCode === selectedCrypto.currencyCode) ?? null;
       }
-      return limit;
+      return sellLimits?.find((l) => l.currencyCode === selectedCrypto.currencyCode) ?? null;
     }
     return null;
-  }, [mode, purchaseLimits, sellLimits, selectedFiatCurrency, selectedCrypto, quotes]);
+  }, [mode, purchaseLimits, sellLimits, refinedPurchaseLimits, refinedSellLimits,
+      selectedFiatCurrency, selectedCrypto, serviceProvider, isLoadingRefinedLimits]);
+
+  // True when provider is selected, refined fetch completed, but returned no limit for this currency
+  const limitUnavailable = useMemo<boolean>(() => {
+    if (!serviceProvider || isLoadingRefinedLimits) return false;
+    if (mode === "BUY" && selectedFiatCurrency) {
+      return !refinedPurchaseLimits?.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode);
+    }
+    if (mode === "SELL" && selectedCrypto) {
+      return !refinedSellLimits?.find((l) => l.currencyCode === selectedCrypto.currencyCode);
+    }
+    return false;
+  }, [mode, refinedPurchaseLimits, refinedSellLimits, selectedFiatCurrency, selectedCrypto,
+      serviceProvider, isLoadingRefinedLimits]);
 
   // ── Auto-set amount from limit defaultAmount ────────────────────────
   useEffect(() => {
@@ -431,6 +477,14 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       setAmount(String(currentLimit.defaultAmount));
     }
   }, [currentLimit]);
+
+  // ── Push quote errors to centralized error state ───────────────────
+  useEffect(() => {
+    if (quoteError && quoteError !== prevQuoteError.current) {
+      pushError("Quote Error", quoteError);
+    }
+    prevQuoteError.current = quoteError;
+  }, [quoteError, pushError]);
 
   // ── Context value ───────────────────────────────────────────────────
   const value = useMemo<WidgetState>(
@@ -454,11 +508,15 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       isLoadingCountries,
       isLoadingCurrencies: loadingFiat || loadingCrypto || loadingPayments,
       isLoadingQuotes,
+      isLoadingLimits,
+      isLoadingRefinedLimits,
       isCreatingSession,
       quoteError,
-      sessionError,
+      appError,
+      pushError,
+      clearError,
       handleBuyOrSell,
-      currentLimit,
+      currentLimit, limitUnavailable,
       txPhase,
       txStatus,
       txId,
@@ -470,8 +528,10 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       countries, fiatCurrencies, cryptoCurrencies, paymentMethods,
       quotes, purchaseLimits, sellLimits, serviceProviderMap,
       isLoadingCountries, loadingFiat, loadingCrypto, loadingPayments,
-      isLoadingQuotes, isCreatingSession, quoteError, sessionError,
-      handleBuyOrSell, handleSetAmount, currentLimit,
+      isLoadingQuotes, isLoadingLimits, isLoadingRefinedLimits, isCreatingSession, quoteError,
+      refinedPurchaseLimits, refinedSellLimits,
+      appError, pushError, clearError,
+      handleBuyOrSell, handleSetAmount, currentLimit, limitUnavailable,
       txPhase, txStatus, txId,
     ]
   );

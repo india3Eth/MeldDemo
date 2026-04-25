@@ -5,12 +5,13 @@ import type { CryptoCurrencySellLimit } from "@/lib/meld/types";
 
 export function useSellLimits(
   countryCode: string | null,
-  serviceProviders: string | null = null,
-  cryptoCurrency: string | null = null
+  serviceProvider: string | null = null,
+  cryptoCurrency: string | null = null,
+  paymentMethodType: string | null = null
 ) {
   return useFetch<CryptoCurrencySellLimit[]>(
     countryCode
-      ? `/api/meld/limits/sell?countries=${countryCode}&accountFilter=true&categories=CRYPTO_OFFRAMP${serviceProviders ? `&serviceProviders=${serviceProviders}` : ""}${cryptoCurrency ? `&cryptoCurrencies=${cryptoCurrency}` : ""}`
+      ? `/api/meld/limits/sell?countries=${countryCode}&accountFilter=true&categories=CRYPTO_OFFRAMP${serviceProvider ? `&serviceProviders=${serviceProvider}` : ""}${cryptoCurrency ? `&cryptoCurrencies=${cryptoCurrency}` : ""}${paymentMethodType ? `&paymentMethodTypes=${paymentMethodType}` : ""}`
       : null
   );
 }

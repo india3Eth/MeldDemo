@@ -4,6 +4,15 @@ import { useWidget } from "@/contexts/WidgetContext";
 import { useTheme } from "@/themes/ThemeProvider";
 import { formatAmount } from "@/lib/utils/format";
 
+function Skeleton({ width, height = 14 }: { width: number | string; height?: number }) {
+  return (
+    <div
+      className="animate-pulse rounded-md"
+      style={{ width, height, background: "rgba(128,128,128,0.18)", display: "inline-block" }}
+    />
+  );
+}
+
 // =============================================================================
 // AmountSection — "You pay" / "You receive" sections
 // =============================================================================
@@ -35,7 +44,11 @@ export function AmountSection({ variant, onOpenSelector }: AmountSectionProps) {
     selectedCrypto,
     selectedQuote,
     currentLimit,
+    limitUnavailable,
     isLoadingQuotes,
+    isLoadingCurrencies,
+    isLoadingLimits,
+    isLoadingRefinedLimits,
   } = useWidget();
   const { tokens } = useTheme();
 
@@ -61,16 +74,19 @@ export function AmountSection({ variant, onOpenSelector }: AmountSectionProps) {
   // Display value — loading state in destination, strip trailing zeros
   const displayValue = isSource
     ? amount
-    : isLoadingQuotes
-      ? "..."
-      : selectedQuote != null
-        ? formatAmount(selectedQuote.destinationAmount)
-        : "—";
+    : selectedQuote != null
+      ? formatAmount(selectedQuote.destinationAmount)
+      : "—";
 
   // Currency display name
   const displayCode = showFiat
-    ? currency?.currencyCode ?? "..."
-    : crypto?.currencyCode ?? "...";
+    ? currency?.currencyCode ?? ""
+    : crypto?.currencyCode ?? "";
+
+  // Show "enter amount" hint when limits are loaded but no defaultAmount was set, or limit is unavailable
+  const showEnterAmountHint = isSource && amount === "" && (
+    (!isLoadingLimits && currentLimit && !currentLimit.defaultAmount) || limitUnavailable
+  );
 
   const displayImage = showFiat
     ? currency?.symbolImageUrl
@@ -91,42 +107,76 @@ export function AmountSection({ variant, onOpenSelector }: AmountSectionProps) {
         padding: "14px 16px",
       }}
     >
-      {/* Label row */}
-      <div className="mb-1.5">
+      {/* Label row — label left, limit or chain info right */}
+      <div className="mb-1.5 flex items-center justify-between">
         <span
           className="text-[12px]"
           style={{ color: tokens.textSecondary, textShadow: tokens.textShadow }}
         >
           {label}
         </span>
+
+        {/* Limit range inline with label (source only) */}
+        {isSource && isLoadingRefinedLimits && (
+          <Skeleton width={110} height={12} />
+        )}
+        {isSource && !isLoadingRefinedLimits && limitUnavailable && (
+          <span className="text-[11px] font-medium" style={{ color: tokens.textMuted }}>
+            No limit info — enter any amount
+          </span>
+        )}
+        {isSource && !isLoadingRefinedLimits && !limitUnavailable && currentLimit && (
+          <span className="text-[11px] font-medium" style={{ color: isOutOfRange ? tokens.errorColor : tokens.textMuted }}>
+            {formatLimitAmount(currentLimit.minimumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
+            {" – "}
+            {formatLimitAmount(currentLimit.maximumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
+          </span>
+        )}
+
+        {/* Chain info inline with label (destination crypto only) */}
+        {!isSource && chainInfo && (
+          <span className="text-[11px]" style={{ color: tokens.textMuted }}>
+            {chainInfo}
+          </span>
+        )}
       </div>
 
       {/* Amount + selector inline */}
       <div className="flex items-center gap-3">
         {/* Amount — takes all remaining space */}
         {isSource ? (
-          <input
-            type="text"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === "" || /^(0|[1-9]\d*)?(\.\d{0,8})?$/.test(val)) setAmount(val);
-            }}
-            className="min-w-0 flex-1 bg-transparent text-[32px] font-bold outline-none"
-            style={{
-              color: isOutOfRange ? "#f87171" : tokens.textPrimary,
-              border: "none",
-              textShadow: tokens.textShadow,
-            }}
-            placeholder="0"
-          />
+          <div className="relative min-w-0 flex-1">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "" || /^(0|[1-9]\d*)?(\.\d{0,8})?$/.test(val)) setAmount(val);
+              }}
+              className="w-full bg-transparent text-[32px] font-bold outline-none"
+              style={{
+                color: isOutOfRange ? tokens.errorColor : tokens.textPrimary,
+                border: "none",
+                textShadow: tokens.textShadow,
+              }}
+              placeholder={showEnterAmountHint ? "" : "0"}
+            />
+            {showEnterAmountHint && amount === "" && (
+              <span
+                className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-[13px] font-medium"
+                style={{ color: tokens.textMuted }}
+              >
+                Enter an amount
+              </span>
+            )}
+          </div>
         ) : (
           <div
             className="min-w-0 flex-1 text-[32px] font-bold"
             style={{ color: tokens.textSecondary, textShadow: tokens.textShadow }}
           >
-            {displayValue}
+            {isLoadingQuotes ? <Skeleton width={100} height={36} /> : displayValue}
           </div>
         )}
 
@@ -136,6 +186,7 @@ export function AmountSection({ variant, onOpenSelector }: AmountSectionProps) {
           className="flex shrink-0 items-center gap-1.5 transition-all duration-200"
           style={{
             padding: "8px 12px",
+            minWidth: "100px",
             background: tokens.pillBg,
             border: tokens.pillBorder,
             borderRadius: tokens.pillRadius,
@@ -145,53 +196,33 @@ export function AmountSection({ variant, onOpenSelector }: AmountSectionProps) {
             fontWeight: 600,
           }}
         >
-          {displayImage && (
-            <img
-              src={displayImage}
-              alt={displayCode}
-              className="h-5 w-5 rounded-full object-cover"
-            />
+          {isLoadingCurrencies ? (
+            <Skeleton width={60} height={16} />
+          ) : (
+            <>
+              {displayImage && (
+                <img
+                  src={displayImage}
+                  alt={displayCode}
+                  className="h-5 w-5 rounded-full object-cover"
+                />
+              )}
+              <span style={{ color: tokens.textPrimary }}>{displayCode}</span>
+            </>
           )}
-          <span style={{ color: tokens.textPrimary }}>{displayCode}</span>
           <span style={{ fontSize: "10px", color: tokens.textMuted }}>▼</span>
         </button>
       </div>
 
-      {/* Chain info + limit below */}
-      {(chainInfo || (isSource && currentLimit)) && (
-        <div className="mt-2">
-          {chainInfo && (
-            <div className="text-[11px]" style={{ color: tokens.textMuted }}>
-              {chainInfo}
-            </div>
-          )}
-
-          {isSource && currentLimit && (
-            <>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px]" style={{ color: isOutOfRange ? "#f87171" : tokens.textMuted }}>
-                  {isBelowMin ? "Minimum" : isAboveMax ? "Maximum" : "Limit"}
-                </span>
-                <span className="text-[11px] font-medium" style={{ color: isOutOfRange ? "#f87171" : tokens.textSecondary }}>
-                  {formatLimitAmount(currentLimit.minimumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
-                  {" – "}
-                  {formatLimitAmount(currentLimit.maximumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
-                </span>
-              </div>
-              {isBelowMin && (
-                <p className="mt-0.5 text-[11px] text-red-400">
-                  Enter at least {formatLimitAmount(currentLimit.minimumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
-                </p>
-              )}
-              {isAboveMax && (
-                <p className="mt-0.5 text-[11px] text-red-400">
-                  Maximum is {formatLimitAmount(currentLimit.maximumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}
-                </p>
-              )}
-            </>
-          )}
-        </div>
+      {/* Out-of-range error — only shows when user enters invalid amount and limit is known */}
+      {isSource && isOutOfRange && !limitUnavailable && (
+        <p className="mt-1.5 text-[11px]" style={{ color: tokens.errorColor }}>
+          {isBelowMin
+            ? `Enter at least ${formatLimitAmount(currentLimit!.minimumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}`
+            : `Maximum is ${formatLimitAmount(currentLimit!.maximumAmount, showFiat ? selectedFiatCurrency?.currencyCode : selectedCrypto?.currencyCode)}`}
+        </p>
       )}
+
     </div>
   );
 }
