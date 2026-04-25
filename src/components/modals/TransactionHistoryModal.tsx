@@ -73,8 +73,25 @@ function TxRow({ tx, onClick }: { tx: Transaction; onClick: () => void }) {
           <span style={{ color: tokens.textMuted, fontWeight: 400 }}> → </span>
           {formatAmount(tx.destinationAmount)} {tx.destinationCurrencyCode ?? ""}
         </div>
-        <div style={{ color: tokens.textMuted, fontSize: "11px", marginTop: "2px" }}>
+        <div style={{ color: tokens.textMuted, fontSize: "11px", marginTop: "2px", display: "flex", alignItems: "center", gap: "6px" }}>
           {formatDate(tx.createdAt)}
+          {tx.transactionType && (
+            <span style={{
+              fontSize: "9px",
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              padding: "1px 5px",
+              borderRadius: "4px",
+              background: tx.transactionType === "CRYPTO_PURCHASE"
+                ? `${tokens.successColor}22`
+                : `${tokens.errorColor}22`,
+              color: tx.transactionType === "CRYPTO_PURCHASE"
+                ? tokens.successColor
+                : tokens.errorColor,
+            }}>
+              {tx.transactionType === "CRYPTO_PURCHASE" ? "BUY" : tx.transactionType === "CRYPTO_SELL" ? "SELL" : "TRANSFER"}
+            </span>
+          )}
         </div>
       </div>
 
