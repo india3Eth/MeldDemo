@@ -198,6 +198,15 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
   // Track whether user has manually edited the amount — if so, don't auto-set from limit default
   const userEditedAmount = useRef(false);
 
+  // Client IP — fetched once on mount, passed to session creation for provider fraud checks
+  const clientIpRef = useRef<string | null>(null);
+  useEffect(() => {
+    fetch("https://api.ipify.org/")
+      .then((r) => r.text())
+      .then((ip) => { clientIpRef.current = ip.trim(); })
+      .catch(() => { /* non-critical — session still works without IP */ });
+  }, []);
+
   // API-derived limit overrides from INVALID_AMOUNT_TOO_LOW / INVALID_AMOUNT_TOO_HIGH
   const [quoteDerivedMinimum, setQuoteDerivedMinimum] = useState<number | null>(null);
   const [quoteDerivedMaximum, setQuoteDerivedMaximum] = useState<number | null>(null);
@@ -519,6 +528,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
         paymentMethodType: selectedPaymentMethod?.paymentMethod,
         redirectUrl,
         redirectFlow: mode === "SELL",
+        clientIpAddress: clientIpRef.current ?? undefined,
       },
       externalCustomerId: walletAddress || `demo-user-${Date.now()}`,
       externalSessionId: externalSessionId,

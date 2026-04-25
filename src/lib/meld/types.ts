@@ -263,6 +263,7 @@ export interface SessionData {
   lockFields?: string[];
   redirectUrl?: string;
   redirectFlow?: boolean;
+  clientIpAddress?: string;
 }
 
 export interface WidgetSessionRequest {
