@@ -107,6 +107,22 @@ const WAITING_STATUSES = new Set(["PENDING_CREATED", "PENDING", "TWO_FA_REQUIRED
 const TERMINAL_STATUSES = new Set(["SETTLED", "FAILED", "DECLINED", "CANCELLED", "REFUNDED"]);
 const POLL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
+// Extract human-readable message from proxy error string: {"error":"Meld API error 400 on PATH: {\"message\":\"...\"}"}
+function parseProxyErrorMessage(errorStr: string): string {
+  try {
+    const outer = JSON.parse(errorStr) as { error?: string };
+    const inner = outer.error ?? errorStr;
+    const jsonMatch = inner.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]) as { message?: string };
+      if (parsed.message) return parsed.message;
+    }
+    return inner;
+  } catch {
+    return errorStr;
+  }
+}
+
 // Parse INVALID_AMOUNT_TOO_LOW / INVALID_AMOUNT_TOO_HIGH from proxy error string
 function parseAmountError(errorStr: string): { type: "min" | "max"; amount: number } | null {
   try {
@@ -365,7 +381,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       ? `${window.location.origin}/transaction/success`
       : undefined;
 
-    const session = await createSession({
+    const { data: session, error: sessionError } = await createSession({
       sessionType: mode,
       sessionData: {
         countryCode: selectedCountry.countryCode,
@@ -377,7 +393,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
           ? selectedCrypto.currencyCode
           : selectedFiatCurrency.currencyCode,
         serviceProvider: selectedQuote.serviceProvider,
-        walletAddress: isBuy ? walletAddress : undefined,
+        walletAddress: walletAddress || undefined,
         paymentMethodType: selectedPaymentMethod?.paymentMethod,
         redirectUrl,
         redirectFlow: mode === "SELL",
@@ -387,7 +403,10 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     });
 
     if (!session) {
-      pushError("Session Error", "Failed to create session. Please try again.");
+      const msg = sessionError
+        ? parseProxyErrorMessage(sessionError)
+        : "Failed to create session. Please try again.";
+      pushError("Session Error", msg);
       return;
     }
 

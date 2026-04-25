@@ -55,11 +55,9 @@ export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
   const isWalletConnected = wallet.connected !== null;
 
   const errorBorder = `1px solid ${tokens.errorColor}66`;
-  const borderStyle = isInvalid
+  const borderStyle = isInvalid || isEmpty
     ? errorBorder
-    : isEmpty && isBuy
-      ? errorBorder
-      : tokens.inputBorder;
+    : tokens.inputBorder;
 
   return (
     <div className="mb-3.5">
@@ -69,7 +67,7 @@ export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
           className="text-[13px] font-medium"
           style={{ color: tokens.textSecondary }}
         >
-          {isBuy ? "Wallet Address" : "Wallet Address (optional)"}
+          Wallet Address
         </label>
 
         {wallet.hasWallet && (

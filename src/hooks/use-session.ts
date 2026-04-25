@@ -10,7 +10,7 @@ interface UseSessionResult {
   session: WidgetSessionResponse | null;
   isLoading: boolean;
   error: string | null;
-  createSession: (body: WidgetSessionRequest) => Promise<WidgetSessionResponse | null>;
+  createSession: (body: WidgetSessionRequest) => Promise<{ data: WidgetSessionResponse | null; error: string | null }>;
 }
 
 export function useSession(): UseSessionResult {
@@ -19,7 +19,7 @@ export function useSession(): UseSessionResult {
   const [error, setError] = useState<string | null>(null);
 
   const createSession = useCallback(
-    async (body: WidgetSessionRequest): Promise<WidgetSessionResponse | null> => {
+    async (body: WidgetSessionRequest): Promise<{ data: WidgetSessionResponse | null; error: string | null }> => {
       setIsLoading(true);
       setError(null);
 
@@ -31,15 +31,17 @@ export function useSession(): UseSessionResult {
         });
         if (!res.ok) {
           const text = await res.text();
-          throw new Error(text || `HTTP ${res.status}`);
+          const message = text || `HTTP ${res.status}`;
+          setError(message);
+          return { data: null, error: message };
         }
         const data = (await res.json()) as WidgetSessionResponse;
         setSession(data);
-        return data;
+        return { data, error: null };
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Unknown error";
         setError(message);
-        return null;
+        return { data: null, error: message };
       } finally {
         setIsLoading(false);
       }
