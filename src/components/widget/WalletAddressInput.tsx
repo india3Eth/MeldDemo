@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useWidget } from "@/contexts/WidgetContext";
 import { useTheme } from "@/themes/ThemeProvider";
 import { useWallet } from "@/hooks/use-wallet";
+import type { WalletType } from "@/hooks/use-wallet";
 
 // =============================================================================
-// WalletAddressInput — wallet address field with wallet connect button
+// WalletAddressInput — wallet address field with multi-wallet picker
 // =============================================================================
 
-// Fix #8: per-chain address format validation
 function validateAddress(address: string, chainCode?: string): boolean {
   if (!address) return true;
   const a = address.trim();
@@ -38,9 +38,11 @@ interface WalletAddressInputProps {
 }
 
 export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
-  const { walletAddress, setWalletAddress, mode, selectedCrypto } = useWidget();
+  const { walletAddress, setWalletAddress, selectedCrypto } = useWidget();
   const { tokens } = useTheme();
   const wallet = useWallet(setWalletAddress);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   // Re-sync connected wallet address after mode switch clears walletAddress
   useEffect(() => {
@@ -49,46 +51,124 @@ export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
     }
   }, [wallet.connected, walletAddress, setWalletAddress]);
 
-  const isBuy = mode === "BUY";
+  // Close picker on outside click
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [pickerOpen]);
+
   const isEmpty = !walletAddress.trim();
   const isInvalid = !isEmpty && !validateAddress(walletAddress, selectedCrypto?.chainCode);
   const isWalletConnected = wallet.connected !== null;
+  const connectedWalletInfo = wallet.availableWallets.find(w => w.type === wallet.connected?.type);
 
   const errorBorder = `1px solid ${tokens.errorColor}66`;
-  const borderStyle = isInvalid || isEmpty
-    ? errorBorder
-    : tokens.inputBorder;
+  const borderStyle = isInvalid || isEmpty ? errorBorder : tokens.inputBorder;
+
+  async function handleConnectClick() {
+    if (wallet.availableWallets.length === 1) {
+      // Only one wallet — connect directly
+      await wallet.connectSpecific(wallet.availableWallets[0].type, selectedCrypto?.chainCode);
+    } else {
+      // Multiple wallets — show picker
+      setPickerOpen((v) => !v);
+    }
+  }
+
+  async function handlePickWallet(type: WalletType) {
+    setPickerOpen(false);
+    await wallet.connectSpecific(type, selectedCrypto?.chainCode);
+  }
 
   return (
     <div className="mb-3.5">
-      {/* Label row — wallet address label + connect/disconnect text link */}
+      {/* Label row */}
       <div className="mb-2 flex items-center justify-between">
-        <label
-          className="text-[13px] font-medium"
-          style={{ color: tokens.textSecondary }}
-        >
+        <label className="text-[13px] font-medium" style={{ color: tokens.textSecondary }}>
           Wallet Address
         </label>
 
         {wallet.hasWallet && (
-          <span
-            onClick={
-              isWalletConnected
-                ? wallet.disconnect
-                : () => wallet.connect(selectedCrypto?.chainCode)
-            }
-            className="text-[12px] font-medium"
-            style={{
-              color: isWalletConnected ? tokens.successColor : tokens.linkColor,
-              cursor: "pointer",
-            }}
-          >
-            {wallet.isConnecting
-              ? "Connecting..."
-              : isWalletConnected
-                ? "Disconnect"
-                : "Connect Wallet"}
-          </span>
+          <div className="relative" ref={pickerRef}>
+            <span
+              onClick={isWalletConnected ? wallet.disconnect : handleConnectClick}
+              className="flex items-center gap-1 text-[12px] font-medium"
+              style={{
+                color: isWalletConnected ? tokens.successColor : tokens.linkColor,
+                cursor: "pointer",
+              }}
+            >
+              {wallet.isConnecting ? "Connecting…" : isWalletConnected ? (
+                <>
+                  {connectedWalletInfo?.icon && connectedWalletInfo.icon.startsWith("data:") ? (
+                    <img src={connectedWalletInfo.icon} alt="" style={{ width: 14, height: 14, borderRadius: 3 }} />
+                  ) : (
+                    <span style={{ fontSize: 14 }}>{connectedWalletInfo?.icon ?? "🔗"}</span>
+                  )}
+                  Disconnect
+                </>
+              ) : "Connect Wallet"}
+            </span>
+
+            {/* Wallet picker dropdown */}
+            {pickerOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 6px)",
+                  right: 0,
+                  background: tokens.modalBg,
+                  border: tokens.modalBorder,
+                  borderRadius: "10px",
+                  boxShadow: tokens.modalShadow,
+                  padding: "6px",
+                  minWidth: "160px",
+                  zIndex: 50,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2px",
+                }}
+              >
+                {wallet.availableWallets.map((w) => (
+                  <button
+                    key={w.type}
+                    onClick={() => handlePickWallet(w.type)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      border: "none",
+                      background: "transparent",
+                      cursor: "pointer",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      color: tokens.textPrimary,
+                      textAlign: "left",
+                      width: "100%",
+                      transition: "background 0.12s",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = tokens.hoverBg; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                  >
+                    {w.icon.startsWith("data:") ? (
+                      <img src={w.icon} alt="" style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0 }} />
+                    ) : (
+                      <span style={{ fontSize: "18px", lineHeight: 1 }}>{w.icon}</span>
+                    )}
+                    {w.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -108,9 +188,7 @@ export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
           type="text"
           placeholder={isWalletConnected ? "Connected" : "Enter wallet address"}
           value={walletAddress}
-          onChange={(e) => {
-            if (!isWalletConnected) setWalletAddress(e.target.value);
-          }}
+          onChange={(e) => { if (!isWalletConnected) setWalletAddress(e.target.value); }}
           readOnly={isWalletConnected}
           className="min-w-0 flex-1 bg-transparent text-sm outline-none"
           style={{
