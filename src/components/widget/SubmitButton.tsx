@@ -32,9 +32,7 @@ export function SubmitButton() {
     ? numAmount >= currentLimit.minimumAmount && numAmount <= currentLimit.maximumAmount
     : true;
 
-  const canSubmit = isBuy
-    ? hasWallet && hasQuote && isAmountValid && isWithinLimits
-    : hasQuote && isAmountValid && isWithinLimits;
+  const canSubmit = hasWallet && hasQuote && isAmountValid && isWithinLimits;
 
   const label = isCreatingSession
     ? "Opening..."
