@@ -176,6 +176,49 @@ function DetailRow({
   );
 }
 
+// ── Copyable wallet address ───────────────────────────────────────────────────
+
+function WalletCopy({ address }: { address: string }) {
+  const { tokens } = useTheme();
+  const [copied, setCopied] = useState(false);
+
+  function copy() {
+    navigator.clipboard.writeText(address).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  const short = address.length > 18 ? `${address.slice(0, 8)}…${address.slice(-6)}` : address;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+      <span style={{
+        color: tokens.textSecondary, fontSize: "11px", fontFamily: "monospace",
+      }}>
+        {short}
+      </span>
+      <button
+        onClick={copy}
+        title={address}
+        style={{
+          background: tokens.pillBg,
+          border: tokens.pillBorder,
+          borderRadius: "5px",
+          padding: "2px 7px",
+          fontSize: "10px",
+          fontWeight: 600,
+          color: copied ? tokens.successColor : tokens.textMuted,
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
 // ── Detail view for a single transaction ─────────────────────────────────────
 
 function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
@@ -292,16 +335,8 @@ function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
           )}
           {destWallet && (
             <DetailRow
-              label="Wallet"
-              custom={
-                <span style={{
-                  color: tokens.textSecondary, fontSize: "11px", fontFamily: "monospace",
-                  maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis",
-                  whiteSpace: "nowrap", display: "inline-block",
-                }}>
-                  {destWallet.length > 18 ? `${destWallet.slice(0, 8)}…${destWallet.slice(-6)}` : destWallet}
-                </span>
-              }
+              label={tx.transactionType === "CRYPTO_SELL" ? "Destination Wallet" : "Your Wallet"}
+              custom={<WalletCopy address={destWallet} />}
             />
           )}
           {blockchainHash && (
@@ -309,18 +344,27 @@ function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
               label="TX Hash"
               last
               custom={
-                <button
-                  onClick={copyHash}
-                  title={blockchainHash}
-                  style={{
-                    background: "none", border: "none", cursor: "pointer",
-                    color: tokens.textSecondary, fontSize: "11px",
-                    fontFamily: "monospace", display: "flex", alignItems: "center", gap: "4px",
-                  }}
-                >
-                  {truncateHash(blockchainHash)}
-                  <span style={{ fontSize: "10px", opacity: 0.6 }}>{copiedHash ? "✓" : "📋"}</span>
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ color: tokens.textSecondary, fontSize: "11px", fontFamily: "monospace" }}>
+                    {truncateHash(blockchainHash)}
+                  </span>
+                  <button
+                    onClick={copyHash}
+                    style={{
+                      background: tokens.pillBg,
+                      border: tokens.pillBorder,
+                      borderRadius: "5px",
+                      padding: "2px 7px",
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      color: copiedHash ? tokens.successColor : tokens.textMuted,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {copiedHash ? "Copied" : "Copy"}
+                  </button>
+                </div>
               }
             />
           )}
