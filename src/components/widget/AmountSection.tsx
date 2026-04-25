@@ -23,7 +23,8 @@ function formatLimitAmount(amount: number, currencyCode?: string): string {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: currencyCode,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(amount);
   } catch {
     return `${currencyCode} ${amount.toLocaleString()}`;

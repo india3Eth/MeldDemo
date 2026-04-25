@@ -107,6 +107,36 @@ const WAITING_STATUSES = new Set(["PENDING_CREATED", "PENDING", "TWO_FA_REQUIRED
 const TERMINAL_STATUSES = new Set(["SETTLED", "FAILED", "DECLINED", "CANCELLED", "REFUNDED"]);
 const POLL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
+// Parse INVALID_AMOUNT_TOO_LOW / INVALID_AMOUNT_TOO_HIGH from proxy error string
+function parseAmountError(errorStr: string): { type: "min" | "max"; amount: number } | null {
+  try {
+    const outer = JSON.parse(errorStr) as { error?: string };
+    const inner = outer.error ?? errorStr;
+    const jsonMatch = inner.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]) as { code?: string; message?: string };
+      if (parsed.code === "INVALID_AMOUNT_TOO_LOW") {
+        const m = parsed.message?.match(/which is ([\d.]+)/);
+        if (m) return { type: "min", amount: parseFloat(m[1]) };
+      }
+      if (parsed.code === "INVALID_AMOUNT_TOO_HIGH") {
+        const m = parsed.message?.match(/which is ([\d.]+)/);
+        if (m) return { type: "max", amount: parseFloat(m[1]) };
+      }
+    }
+  } catch {
+    if (errorStr.includes("INVALID_AMOUNT_TOO_LOW")) {
+      const m = errorStr.match(/which is ([\d.]+)/);
+      if (m) return { type: "min", amount: parseFloat(m[1]) };
+    }
+    if (errorStr.includes("INVALID_AMOUNT_TOO_HIGH")) {
+      const m = errorStr.match(/which is ([\d.]+)/);
+      if (m) return { type: "max", amount: parseFloat(m[1]) };
+    }
+  }
+  return null;
+}
+
 export function WidgetProvider({ children }: { children: ReactNode }) {
   // ── Core state ───────────────────────────────────────────────────────
   const [mode, setMode] = useState<SessionType>("BUY");
@@ -134,6 +164,10 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
 
   // Track whether user has manually edited the amount — if so, don't auto-set from limit default
   const userEditedAmount = useRef(false);
+
+  // API-derived limit overrides from INVALID_AMOUNT_TOO_LOW / INVALID_AMOUNT_TOO_HIGH
+  const [quoteDerivedMinimum, setQuoteDerivedMinimum] = useState<number | null>(null);
+  const [quoteDerivedMaximum, setQuoteDerivedMaximum] = useState<number | null>(null);
 
   // ── Transaction tracking (Supabase Realtime) ─────────────────────────
   const [txPhase, setTxPhase] = useState<TransactionPhase>("idle");
@@ -196,6 +230,21 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     channelRef.current = channel;
   }
 
+  // Clear API-derived limit overrides when the currency changes (not on provider change —
+  // provider goes null→value when first quote loads, which would wipe a just-set derived limit)
+  const prevCryptoRef = useRef<string | null>(null);
+  const prevFiatRef = useRef<string | null>(null);
+  useEffect(() => {
+    const crypto = selectedCrypto?.currencyCode ?? null;
+    const fiat = selectedFiatCurrency?.currencyCode ?? null;
+    if (crypto !== prevCryptoRef.current || fiat !== prevFiatRef.current) {
+      prevCryptoRef.current = crypto;
+      prevFiatRef.current = fiat;
+      setQuoteDerivedMinimum(null);
+      setQuoteDerivedMaximum(null);
+    }
+  }, [selectedCrypto, selectedFiatCurrency]);
+
   // Wrap setAmount to mark user intent
   const handleSetAmount = useCallback((val: string) => {
     userEditedAmount.current = true;
@@ -216,6 +265,8 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     setAppError(null);
     setAmount("");
     userEditedAmount.current = false;
+    setQuoteDerivedMinimum(null);
+    setQuoteDerivedMaximum(null);
     unsubscribe();
     setTxPhase("idle");
     setTxStatus(null);
@@ -433,30 +484,42 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
   //   - refined loaded + has data → show refined
   //   - refined loaded + empty → null (unavailable for this combination)
   // When no provider selected: show base
+  // quoteDerivedMinimum overrides minimumAmount when API returns INVALID_AMOUNT_TOO_LOW
   const currentLimit = useMemo<FiatCurrencyPurchaseLimit | CryptoCurrencySellLimit | null>(() => {
+    let limit: FiatCurrencyPurchaseLimit | CryptoCurrencySellLimit | null = null;
+
     if (mode === "BUY" && selectedFiatCurrency) {
       if (serviceProvider) {
-        if (isLoadingRefinedLimits) {
-          // Still fetching refined — show base as placeholder
-          return purchaseLimits?.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode) ?? null;
-        }
-        // Refined fetch done — use it or null (don't fall back to base)
-        return refinedPurchaseLimits?.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode) ?? null;
+        limit = isLoadingRefinedLimits
+          ? (purchaseLimits?.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode) ?? null)
+          : (refinedPurchaseLimits?.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode) ?? null);
+      } else {
+        limit = purchaseLimits?.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode) ?? null;
       }
-      return purchaseLimits?.find((l) => l.currencyCode === selectedFiatCurrency.currencyCode) ?? null;
-    }
-    if (mode === "SELL" && selectedCrypto) {
+    } else if (mode === "SELL" && selectedCrypto) {
       if (serviceProvider) {
-        if (isLoadingRefinedLimits) {
-          return sellLimits?.find((l) => l.currencyCode === selectedCrypto.currencyCode) ?? null;
-        }
-        return refinedSellLimits?.find((l) => l.currencyCode === selectedCrypto.currencyCode) ?? null;
+        limit = isLoadingRefinedLimits
+          ? (sellLimits?.find((l) => l.currencyCode === selectedCrypto.currencyCode) ?? null)
+          : (refinedSellLimits?.find((l) => l.currencyCode === selectedCrypto.currencyCode) ?? null);
+      } else {
+        limit = sellLimits?.find((l) => l.currencyCode === selectedCrypto.currencyCode) ?? null;
       }
-      return sellLimits?.find((l) => l.currencyCode === selectedCrypto.currencyCode) ?? null;
     }
-    return null;
+
+    // Override min/max when API returned the real bounds via amount errors
+    if (limit && (quoteDerivedMinimum || quoteDerivedMaximum)) {
+      return {
+        ...limit,
+        ...(quoteDerivedMinimum && quoteDerivedMinimum > limit.minimumAmount
+          ? { minimumAmount: quoteDerivedMinimum } : {}),
+        ...(quoteDerivedMaximum && quoteDerivedMaximum < limit.maximumAmount
+          ? { maximumAmount: quoteDerivedMaximum } : {}),
+      };
+    }
+    return limit;
   }, [mode, purchaseLimits, sellLimits, refinedPurchaseLimits, refinedSellLimits,
-      selectedFiatCurrency, selectedCrypto, serviceProvider, isLoadingRefinedLimits]);
+      selectedFiatCurrency, selectedCrypto, serviceProvider, isLoadingRefinedLimits,
+      quoteDerivedMinimum, quoteDerivedMaximum]);
 
   // True when provider is selected, refined fetch completed, but returned no limit for this currency
   const limitUnavailable = useMemo<boolean>(() => {
@@ -480,10 +543,27 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
 
   // ── Push quote errors to centralized error state ───────────────────
   useEffect(() => {
-    if (quoteError && quoteError !== prevQuoteError.current) {
-      pushError("Quote Error", quoteError);
+    if (!quoteError) {
+      prevQuoteError.current = null;
+      return;
     }
+    if (quoteError === prevQuoteError.current) return;
     prevQuoteError.current = quoteError;
+
+    // INVALID_AMOUNT_TOO_LOW / INVALID_AMOUNT_TOO_HIGH: update limit display inline, skip modal
+    const parsed = parseAmountError(quoteError);
+    if (parsed) {
+      if (parsed.type === "min") {
+        setQuoteDerivedMinimum(parsed.amount);
+        setAmount(String(parsed.amount));
+      } else {
+        setQuoteDerivedMaximum(parsed.amount);
+        setAmount(String(parsed.amount));
+      }
+      return;
+    }
+
+    pushError("Quote Error", quoteError);
   }, [quoteError, pushError]);
 
   // ── Context value ───────────────────────────────────────────────────
@@ -531,7 +611,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       isLoadingQuotes, isLoadingLimits, isLoadingRefinedLimits, isCreatingSession, quoteError,
       refinedPurchaseLimits, refinedSellLimits,
       appError, pushError, clearError,
-      handleBuyOrSell, handleSetAmount, currentLimit, limitUnavailable,
+      handleBuyOrSell, handleSetAmount, currentLimit, limitUnavailable, quoteDerivedMinimum, quoteDerivedMaximum,
       txPhase, txStatus, txId,
     ]
   );
