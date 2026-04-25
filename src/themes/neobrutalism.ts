@@ -71,5 +71,9 @@ export const neobrutalism: ThemeDefinition = {
     hoverBg: "#FFD23F",
     selectedBg: "#74B9FF",
     selectedBorder: "3px solid #000000",
+
+    linkColor: "#2563eb",
+    errorColor: "#dc2626",
+    successColor: "#16a34a",
   },
 };

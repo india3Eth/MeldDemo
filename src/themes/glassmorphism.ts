@@ -1,18 +1,16 @@
 // =============================================================================
-// Glassmorphism Theme
+// Glassmorphism Theme — "visionOS Light"
 // =============================================================================
-// Design principles (per glassmorphism.css, Apple visionOS, Windows Fluent):
+// Design principles:
 //
-//   - Multi-color vibrant background — the glass needs something to show through
-//   - Frosted glass via backdrop-filter: blur() + saturate()
-//   - Layered transparency: widget > section > element (decreasing opacity)
-//   - Thin white borders simulate glass edge refraction
-//   - Inner top highlight = light hitting glass surface
-//   - Subtle color tinting — glass is never perfectly neutral
-//   - Depth via soft drop shadows on floating panels
-//   - Typography: crisp white, slight drop shadow for readability on glass
-//   - Accent uses a tinted glass with higher opacity for interactivity
-//   - Modal gets its own frosted glass layer — never opaque
+//   - LIGHT glassmorphism: bright colorful background, white-frosted panels,
+//     dark text. Think Apple visionOS, macOS Sonoma desktop widgets.
+//   - Background is a warm-to-cool pastel gradient — the "sky" you frost over.
+//   - Glass panels use high white opacity (0.55–0.70) — frosted, not see-through.
+//   - Dark charcoal text on light glass — crisp, readable, no text shadows needed.
+//   - Accent: saturated blue — clean, confident, Apple-esque.
+//   - Sections have very subtle white overlays for nesting hierarchy.
+//   - This is the visual opposite of Liquid Glass (dark, warm, translucent).
 // =============================================================================
 
 import type { ThemeDefinition } from "./types";
@@ -21,97 +19,100 @@ export const glassmorphism: ThemeDefinition = {
   id: "glassmorphism",
   name: "Glassmorphism",
   icon: "\uD83D\uDC8E",
-  selectorColor: "#7c5ce7",
+  selectorColor: "#0ea5e9",
   tokens: {
-    // Rich multi-color gradient — the glass needs something vibrant to frost over
+    // Bright pastel gradient — the colorful sky behind the frost
     pageBg: [
       "linear-gradient(135deg,",
-      "#667eea 0%,",     // periwinkle blue
-      "#764ba2 25%,",    // deep orchid
-      "#f093fb 45%,",    // bright pink
-      "#4facfe 65%,",    // vivid sky blue
-      "#00f2fe 85%,",    // cyan
-      "#43e97b 100%)",   // emerald green
+      "#e0f2fe 0%,",       // light sky blue
+      "#ddd6fe 25%,",      // soft lavender
+      "#fce7f3 50%,",      // blush pink
+      "#ccfbf1 75%,",      // mint
+      "#cffafe 100%)",     // light cyan
     ].join(" "),
 
-    // Primary glass panel — proper frosted glass opacity
-    widgetBg: "rgba(255, 255, 255, 0.18)",
-    widgetBorder: "1px solid rgba(255,255,255,0.3)",
+    // Heavy frosted white glass — high opacity, strong blur
+    widgetBg: "rgba(255, 255, 255, 0.62)",
+    widgetBorder: "1px solid rgba(255,255,255,0.75)",
     widgetRadius: "24px",
     widgetShadow: [
-      "0 8px 32px rgba(31,38,135,0.25)",
-      "0 2px 8px rgba(0,0,0,0.08)",
-      "inset 0 1px 0 rgba(255,255,255,0.4)",
-      "inset 0 -1px 0 rgba(255,255,255,0.06)",
+      "0 8px 32px rgba(0,0,0,0.08)",
+      "0 2px 8px rgba(0,0,0,0.04)",
+      "inset 0 1px 0 rgba(255,255,255,0.9)",
+      "inset 0 -1px 0 rgba(0,0,0,0.02)",
     ].join(", "),
-    widgetBackdrop: "blur(20px) saturate(180%)",
+    widgetBackdrop: "blur(40px) saturate(180%)",
 
-    // Inner sections — subtler frost layer
-    sectionBg: "rgba(255, 255, 255, 0.10)",
-    sectionBorder: "1px solid rgba(255,255,255,0.18)",
+    // Inner sections — slightly more frosted layer
+    sectionBg: "rgba(255, 255, 255, 0.40)",
+    sectionBorder: "1px solid rgba(255,255,255,0.65)",
     sectionRadius: "16px",
     sectionShadow: [
-      "0 2px 12px rgba(0,0,0,0.06)",
-      "inset 0 1px 0 rgba(255,255,255,0.25)",
+      "0 1px 6px rgba(0,0,0,0.04)",
+      "inset 0 1px 0 rgba(255,255,255,0.85)",
     ].join(", "),
-    sectionBackdrop: "blur(10px)",
+    sectionBackdrop: "blur(16px)",
 
-    // Typography — crisp white on glass with drop shadow for readability
-    textPrimary: "#ffffff",
-    textSecondary: "rgba(255,255,255,0.78)",
-    textMuted: "rgba(255,255,255,0.48)",
-    textShadow: "0 1px 3px rgba(0,0,0,0.2)",
+    // Typography — dark on light glass, no text shadow needed
+    textPrimary: "#1e293b",
+    textSecondary: "#475569",
+    textMuted: "#94a3b8",
+    textShadow: "none",
 
-    // Accent — tinted glass with higher opacity for clear interactivity
-    accentBg: "rgba(102, 126, 234, 0.6)",
+    // Accent — saturated sky blue, Apple-esque
+    accentBg: "#0ea5e9",
     accentText: "#ffffff",
     accentShadow: [
-      "0 4px 16px rgba(102,126,234,0.4)",
-      "inset 0 1px 0 rgba(255,255,255,0.3)",
+      "0 4px 14px rgba(14,165,233,0.35)",
+      "inset 0 1px 0 rgba(255,255,255,0.25)",
     ].join(", "),
 
-    // Toggle — recessed glass track
+    // Toggle — recessed frost track
     toggleBg: "transparent",
-    toggleInactiveText: "rgba(255,255,255,0.5)",
-    toggleTrackBg: "rgba(255,255,255,0.08)",
-    toggleTrackBorder: "1px solid rgba(255,255,255,0.14)",
-    toggleTrackShadow: "inset 0 2px 4px rgba(0,0,0,0.12)",
+    toggleInactiveText: "#94a3b8",
+    toggleTrackBg: "rgba(255,255,255,0.50)",
+    toggleTrackBorder: "1px solid rgba(0,0,0,0.06)",
+    toggleTrackShadow: "inset 0 1px 3px rgba(0,0,0,0.06)",
 
-    // Inputs — subtle frosted recess
-    inputBg: "rgba(255,255,255,0.10)",
-    inputBorder: "1px solid rgba(255,255,255,0.20)",
+    // Inputs — frosted recess, dark text
+    inputBg: "rgba(255,255,255,0.50)",
+    inputBorder: "1px solid rgba(0,0,0,0.08)",
     inputRadius: "12px",
-    inputShadow: "inset 0 1px 3px rgba(0,0,0,0.08)",
+    inputShadow: "inset 0 1px 2px rgba(0,0,0,0.04)",
 
-    // Pills — small floating glass elements
-    pillBg: "rgba(255,255,255,0.14)",
-    pillBorder: "1px solid rgba(255,255,255,0.22)",
+    // Pills — small frosted glass chips
+    pillBg: "rgba(255,255,255,0.55)",
+    pillBorder: "1px solid rgba(0,0,0,0.06)",
     pillRadius: "10px",
     pillShadow: [
-      "0 2px 8px rgba(0,0,0,0.1)",
-      "inset 0 1px 0 rgba(255,255,255,0.18)",
+      "0 1px 4px rgba(0,0,0,0.06)",
+      "inset 0 1px 0 rgba(255,255,255,0.8)",
     ].join(", "),
 
-    // Disabled — faint ghost glass
-    disabledBg: "rgba(255,255,255,0.05)",
-    disabledText: "rgba(255,255,255,0.25)",
+    // Disabled — very faint frost
+    disabledBg: "rgba(255,255,255,0.30)",
+    disabledText: "#cbd5e1",
 
-    dividerColor: "rgba(255,255,255,0.14)",
+    dividerColor: "rgba(0,0,0,0.06)",
 
-    // Modal — frosted dark glass layer
-    modalBg: "rgba(20, 15, 40, 0.55)",
-    modalBorder: "1px solid rgba(255,255,255,0.18)",
+    // Modal — deeper frosted layer
+    modalBg: "rgba(255, 255, 255, 0.72)",
+    modalBorder: "1px solid rgba(255,255,255,0.80)",
     modalRadius: "20px",
-    modalBackdrop: "blur(32px) saturate(160%)",
+    modalBackdrop: "blur(48px) saturate(180%)",
     modalShadow: [
-      "0 24px 80px rgba(0,0,0,0.35)",
-      "0 8px 24px rgba(0,0,0,0.2)",
-      "inset 0 1px 0 rgba(255,255,255,0.14)",
+      "0 24px 80px rgba(0,0,0,0.12)",
+      "0 8px 24px rgba(0,0,0,0.06)",
+      "inset 0 1px 0 rgba(255,255,255,0.90)",
     ].join(", "),
 
     // Interactive states
-    hoverBg: "rgba(255,255,255,0.14)",
-    selectedBg: "rgba(102,126,234,0.25)",
-    selectedBorder: "1.5px solid rgba(102,126,234,0.6)",
+    hoverBg: "rgba(14,165,233,0.06)",
+    selectedBg: "rgba(14,165,233,0.10)",
+    selectedBorder: "1.5px solid rgba(14,165,233,0.5)",
+
+    linkColor: "#0284c7",
+    errorColor: "#dc2626",
+    successColor: "#16a34a",
   },
 };

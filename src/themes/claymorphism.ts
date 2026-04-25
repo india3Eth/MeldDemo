@@ -79,5 +79,9 @@ export const claymorphism: ThemeDefinition = {
     hoverBg: "rgba(240,230,252,0.5)",
     selectedBg: "rgba(240,132,155,0.15)",
     selectedBorder: "2px solid #e76882",
+
+    linkColor: "#7c3aed",
+    errorColor: "#dc2626",
+    successColor: "#16a34a",
   },
 };

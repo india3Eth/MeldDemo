@@ -1,75 +1,95 @@
+// =============================================================================
+// Minimalism Theme — "Warm Japandi"
+// =============================================================================
+// Design principles:
+//
+//   - Inspired by Japanese–Scandinavian design fusion: warm, intentional, restful.
+//   - Sand/stone palette replaces sterile white. Nothing is #ffffff — everything
+//     has a warm undertone that says "someone chose this."
+//   - Sections get ultra-subtle warm containment: barely-there bg + warm shadow.
+//     They exist as visual groups, not as bordered "cards."
+//   - Accent: deep terracotta — unexpected for a finance widget, warm and grounded.
+//   - Typography hierarchy through weight and size only — no color gimmicks.
+//   - Shadows are warm (brown-tinted), not cold gray.
+//   - Overall feeling: a well-typeset editorial page, not a generic dashboard.
+// =============================================================================
+
 import type { ThemeDefinition } from "./types";
 
 export const minimalism: ThemeDefinition = {
   id: "minimalism",
   name: "Minimalism",
   icon: "\u25FB\uFE0F",
-  selectorColor: "#18181B",
+  selectorColor: "#78716c",
   tokens: {
-    // Warm off-white — intentional, not clinical
-    pageBg: "#F7F7F5",
+    // Warm sand — intentional warmth, not clinical white
+    pageBg: "#f5f0eb",
 
-    // Clean white card with a single delicate shadow for quiet depth
-    widgetBg: "#ffffff",
-    widgetBorder: "1px solid #E8E8E5",
-    widgetRadius: "12px",
-    widgetShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03)",
+    // Stone-white card with warm shadow for quiet depth
+    widgetBg: "#faf8f5",
+    widgetBorder: "none",
+    widgetRadius: "16px",
+    widgetShadow: "0 1px 2px rgba(120,100,80,0.04), 0 6px 24px rgba(120,100,80,0.06)",
     widgetBackdrop: "none",
 
-    // Sections — transparent, separated by dividers not boxes
-    sectionBg: "transparent",
+    // Sections — ultra-subtle warm containment (not invisible, not boxy)
+    sectionBg: "rgba(120,100,80,0.04)",
     sectionBorder: "none",
-    sectionRadius: "8px",
+    sectionRadius: "12px",
     sectionShadow: "none",
     sectionBackdrop: "none",
 
-    // Typography — rich warm blacks with generous hierarchy
-    textPrimary: "#18181B",
-    textSecondary: "#52525B",
-    textMuted: "#A1A1AA",
+    // Typography — warm charcoal, generous hierarchy
+    textPrimary: "#292524",
+    textSecondary: "#57534e",
+    textMuted: "#a8a29e",
     textShadow: "none",
 
-    // Single accent: refined near-black — lets typography do the work
-    accentBg: "#18181B",
-    accentText: "#ffffff",
-    accentShadow: "none",
+    // Accent: deep terracotta — warm, grounded, unexpected
+    accentBg: "#c2410c",
+    accentText: "#fef2f2",
+    accentShadow: "0 2px 8px rgba(194,65,12,0.15)",
 
-    // Toggle
+    // Toggle — warm stone track
     toggleBg: "transparent",
-    toggleInactiveText: "#A1A1AA",
-    toggleTrackBg: "#F4F4F2",
-    toggleTrackBorder: "1px solid #E8E8E5",
+    toggleInactiveText: "#a8a29e",
+    toggleTrackBg: "rgba(120,100,80,0.06)",
+    toggleTrackBorder: "1px solid rgba(120,100,80,0.10)",
     toggleTrackShadow: "none",
 
-    // Inputs — hairline border, subtle radius
-    inputBg: "#ffffff",
-    inputBorder: "1px solid #E8E8E5",
-    inputRadius: "8px",
+    // Inputs — hairline warm border
+    inputBg: "#faf8f5",
+    inputBorder: "1px solid rgba(120,100,80,0.14)",
+    inputRadius: "10px",
     inputShadow: "none",
 
-    // Pills — consistent with inputs
-    pillBg: "#ffffff",
-    pillBorder: "1px solid #E8E8E5",
-    pillRadius: "8px",
+    // Pills — warm stone feel
+    pillBg: "rgba(120,100,80,0.05)",
+    pillBorder: "1px solid rgba(120,100,80,0.12)",
+    pillRadius: "10px",
     pillShadow: "none",
 
-    // Disabled — barely there
-    disabledBg: "#F4F4F2",
-    disabledText: "#D4D4D0",
+    // Disabled — barely visible warm fade
+    disabledBg: "rgba(120,100,80,0.06)",
+    disabledText: "#d6d3d1",
 
-    // Divider — light and quiet
-    dividerColor: "#E8E8E5",
+    // Divider — warm and quiet
+    dividerColor: "rgba(120,100,80,0.10)",
 
-    // Modal — subtle elevation
-    modalBg: "#ffffff",
-    modalBorder: "1px solid #E8E8E5",
-    modalRadius: "12px",
+    // Modal — warm stone elevation
+    modalBg: "#faf8f5",
+    modalBorder: "none",
+    modalRadius: "16px",
     modalBackdrop: "none",
-    modalShadow: "0 4px 24px rgba(0,0,0,0.08), 0 12px 48px rgba(0,0,0,0.04)",
+    modalShadow: "0 4px 24px rgba(120,100,80,0.10), 0 16px 56px rgba(120,100,80,0.08)",
 
-    // Interactive — minimal and precise
-    hoverBg: "#F7F7F5",
-    selectedBg: "#F4F4F2",
-    selectedBorder: "2px solid #18181B",
+    // Interactive — warm and precise
+    hoverBg: "rgba(120,100,80,0.06)",
+    selectedBg: "rgba(194,65,12,0.06)",
+    selectedBorder: "2px solid #c2410c",
+
+    linkColor: "#c2410c",
+    errorColor: "#dc2626",
+    successColor: "#16a34a",
   },
 };

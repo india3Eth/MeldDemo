@@ -71,6 +71,13 @@ export interface ThemeTokens {
   hoverBg: string;
   selectedBg: string;
   selectedBorder: string;
+
+  // Semantic accent for links, brand highlights, interactive text
+  linkColor: string;
+
+  // Semantic status — used for error text/borders across all components
+  errorColor: string;
+  successColor: string;
 }
 
 export interface ThemeDefinition {

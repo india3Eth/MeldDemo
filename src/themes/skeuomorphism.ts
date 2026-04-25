@@ -119,5 +119,9 @@ export const skeuomorphism: ThemeDefinition = {
     hoverBg: "linear-gradient(180deg, #f7f5f0 0%, #f0ede8 100%)",
     selectedBg: "rgba(52,120,246,0.10)",
     selectedBorder: "1.5px solid #3478F6",
+
+    linkColor: "#3478F6",
+    errorColor: "#dc2626",
+    successColor: "#16a34a",
   },
 };

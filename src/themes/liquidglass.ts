@@ -1,105 +1,111 @@
+// =============================================================================
+// Liquid Glass Theme — "Frosted Mint"
+// =============================================================================
+// Design principles:
+//
+//   - LIGHT liquid glass on warm neutral canvas — NOT pastels like glassmorphism.
+//   - Background: solid warm light gray. No gradient. Quiet canvas.
+//   - Glass panels have subtle green-gray tint — like real tinted glass, not
+//     white frost. Blur + refraction highlights create the liquid feel.
+//   - Accent: deep teal — grounded, sophisticated, fintech-trustworthy.
+//   - Typography: dark slate — crisp, professional, readable.
+//   - Difference from glassmorphism: that theme = colorful pastel sky + pure
+//     white frost + bright blue. This = neutral warm gray + tinted glass + teal.
+// =============================================================================
+
 import type { ThemeDefinition } from "./types";
 
 export const liquidglass: ThemeDefinition = {
   id: "liquidglass",
   name: "Liquid Glass",
   icon: "\uD83D\uDCA7",
-  selectorColor: "#a78bfa",
+  selectorColor: "#0d9488",
   tokens: {
-    // Multi-color dynamic background — warm-to-cool gradient for refraction variety
-    pageBg: [
-      "linear-gradient(135deg,",
-      "#1a1a2e 0%,",       // deep navy
-      "#16213e 20%,",      // dark blue
-      "#0f3460 40%,",      // rich blue
-      "#533483 60%,",      // deep purple
-      "#e94560 80%,",      // hot pink accent
-      "#0f3460 100%)",     // loop back to blue
-    ].join(" "),
+    // Warm light gray — neutral canvas, not colorful
+    pageBg: "#eeecea",
 
-    // Liquid glass panel — high transparency with strong refraction highlights
-    // 3 layers: highlight (bright top inset), shadow (outer drop), illumination (bottom inset glow)
-    widgetBg:
-      "linear-gradient(160deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.08) 100%)",
-    widgetBorder: "1.5px solid rgba(255,255,255,0.45)",
+    // Green-gray tinted glass — subtle tint, not pure white frost
+    widgetBg: "rgba(240,253,250,0.65)",
+    widgetBorder: "1px solid rgba(13,148,136,0.14)",
     widgetRadius: "28px",
     widgetShadow: [
-      "0 8px 40px rgba(0,0,0,0.3)",
-      "0 2px 8px rgba(0,0,0,0.12)",
-      "inset 0 2px 0 rgba(255,255,255,0.55)",         // highlight layer — bright top edge
-      "inset 0 -1px 0 rgba(255,255,255,0.08)",        // illumination — subtle bottom glow
+      "0 8px 32px rgba(0,0,0,0.07)",
+      "0 2px 8px rgba(0,0,0,0.04)",
+      "inset 0 1.5px 0 rgba(255,255,255,0.85)",
+      "inset 0 -1px 0 rgba(0,0,0,0.02)",
     ].join(", "),
-    widgetBackdrop: "blur(40px) saturate(200%) brightness(110%)",
+    widgetBackdrop: "blur(40px) saturate(170%)",
 
-    // Inner sections — thinner glass layer, softer refraction
-    sectionBg:
-      "linear-gradient(160deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 100%)",
-    sectionBorder: "1px solid rgba(255,255,255,0.35)",
+    // Inner sections — slightly deeper tinted glass
+    sectionBg: "rgba(204,251,241,0.30)",
+    sectionBorder: "1px solid rgba(13,148,136,0.10)",
     sectionRadius: "20px",
     sectionShadow: [
-      "0 4px 20px rgba(0,0,0,0.12)",
-      "inset 0 1.5px 0 rgba(255,255,255,0.5)",        // highlight
-      "inset 0 -0.5px 0 rgba(255,255,255,0.06)",      // illumination
+      "0 1px 6px rgba(0,0,0,0.04)",
+      "inset 0 1px 0 rgba(255,255,255,0.80)",
     ].join(", "),
-    sectionBackdrop: "blur(24px) saturate(180%)",
+    sectionBackdrop: "blur(16px)",
 
-    // Typography — crisp white, no text shadow (liquid glass is clearer than frosted)
-    textPrimary: "#ffffff",
-    textSecondary: "rgba(255,255,255,0.80)",
-    textMuted: "rgba(255,255,255,0.50)",
-    textShadow: "0 0 8px rgba(0,0,0,0.15)",
+    // Typography — dark slate, crisp on light glass
+    textPrimary: "#1e293b",
+    textSecondary: "#475569",
+    textMuted: "#94a3b8",
+    textShadow: "none",
 
-    // Accent — luminous tinted glass with bright refraction edge
-    accentBg:
-      "linear-gradient(160deg, rgba(167,139,250,0.55) 0%, rgba(120,80,220,0.45) 100%)",
+    // Accent — deep teal: grounded, sophisticated
+    accentBg: "#0d9488",
     accentText: "#ffffff",
     accentShadow: [
-      "0 4px 20px rgba(120,80,220,0.35)",
-      "inset 0 1.5px 0 rgba(255,255,255,0.45)",
+      "0 4px 14px rgba(13,148,136,0.30)",
+      "inset 0 1px 0 rgba(255,255,255,0.20)",
     ].join(", "),
 
-    // Toggle — recessed liquid well
+    // Toggle — tinted glass track
     toggleBg: "transparent",
-    toggleInactiveText: "rgba(255,255,255,0.45)",
-    toggleTrackBg: "rgba(255,255,255,0.08)",
-    toggleTrackBorder: "1px solid rgba(255,255,255,0.25)",
-    toggleTrackShadow: "inset 0 2px 4px rgba(0,0,0,0.15)",
+    toggleInactiveText: "#94a3b8",
+    toggleTrackBg: "rgba(204,251,241,0.50)",
+    toggleTrackBorder: "1px solid rgba(13,148,136,0.08)",
+    toggleTrackShadow: "inset 0 1px 3px rgba(0,0,0,0.05)",
 
-    // Inputs — clear glass recess
-    inputBg: "rgba(255,255,255,0.10)",
-    inputBorder: "1px solid rgba(255,255,255,0.30)",
+    // Inputs — tinted glass recess
+    inputBg: "rgba(240,253,250,0.55)",
+    inputBorder: "1px solid rgba(13,148,136,0.12)",
     inputRadius: "14px",
-    inputShadow: "inset 0 2px 4px rgba(0,0,0,0.12)",
+    inputShadow: "inset 0 1px 2px rgba(0,0,0,0.04)",
 
-    // Pills — small liquid glass drops
-    pillBg: "rgba(255,255,255,0.14)",
-    pillBorder: "1px solid rgba(255,255,255,0.32)",
+    // Pills — small tinted glass chips
+    pillBg: "rgba(204,251,241,0.45)",
+    pillBorder: "1px solid rgba(13,148,136,0.10)",
     pillRadius: "12px",
     pillShadow: [
-      "0 2px 8px rgba(0,0,0,0.12)",
-      "inset 0 1px 0 rgba(255,255,255,0.35)",
+      "0 1px 4px rgba(0,0,0,0.05)",
+      "inset 0 1px 0 rgba(255,255,255,0.75)",
     ].join(", "),
 
     // Disabled
-    disabledBg: "rgba(255,255,255,0.05)",
-    disabledText: "rgba(255,255,255,0.22)",
+    disabledBg: "rgba(204,251,241,0.25)",
+    disabledText: "#cbd5e1",
 
-    dividerColor: "rgba(255,255,255,0.12)",
+    dividerColor: "rgba(13,148,136,0.08)",
 
-    // Modal — deep liquid glass with strong blur
-    modalBg: "rgba(15,15,30,0.55)",
-    modalBorder: "1.5px solid rgba(255,255,255,0.3)",
+    // Modal — deeper tinted glass layer
+    modalBg: "rgba(240,253,250,0.78)",
+    modalBorder: "1px solid rgba(13,148,136,0.12)",
     modalRadius: "24px",
-    modalBackdrop: "blur(48px) saturate(200%) brightness(105%)",
+    modalBackdrop: "blur(48px) saturate(170%)",
     modalShadow: [
-      "0 24px 64px rgba(0,0,0,0.4)",
-      "0 8px 24px rgba(0,0,0,0.2)",
-      "inset 0 1.5px 0 rgba(255,255,255,0.25)",
+      "0 24px 80px rgba(0,0,0,0.10)",
+      "0 8px 24px rgba(0,0,0,0.06)",
+      "inset 0 1px 0 rgba(255,255,255,0.85)",
     ].join(", "),
 
-    // Interactive states
-    hoverBg: "rgba(255,255,255,0.16)",
-    selectedBg: "rgba(167,139,250,0.22)",
-    selectedBorder: "1.5px solid rgba(167,139,250,0.6)",
+    // Interactive states — teal-tinted
+    hoverBg: "rgba(13,148,136,0.06)",
+    selectedBg: "rgba(13,148,136,0.10)",
+    selectedBorder: "1.5px solid rgba(13,148,136,0.45)",
+
+    linkColor: "#0f766e",
+    errorColor: "#dc2626",
+    successColor: "#16a34a",
   },
 };
