@@ -57,7 +57,7 @@ interface WalletAddressInputProps {
 export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
   const { walletAddress, setWalletAddress, selectedCrypto } = useWidget();
   const { tokens } = useTheme();
-  const wallet = useWallet(setWalletAddress);
+  const wallet = useWallet(setWalletAddress, selectedCrypto?.chainCode);
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 

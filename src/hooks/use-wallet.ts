@@ -91,7 +91,8 @@ export interface UseWalletReturn {
 }
 
 export function useWallet(
-  onAddressChange: (address: string) => void
+  onAddressChange: (address: string) => void,
+  chainCode?: string,
 ): UseWalletReturn {
   // EVM wallets discovered via EIP-6963
   const [evmWallets, setEvmWallets] = useState<Map<string, EIP6963ProviderDetail>>(new Map());
@@ -150,11 +151,9 @@ export function useWallet(
   }, [evmWallets]);
 
   // ── Available wallets list ──────────────────────────────────────────────────
-  // If Phantom is present both as EIP-6963 EVM wallet AND window.solana,
-  // label the Solana entry "Phantom (Solana)" to avoid two identical "Phantom" rows.
-  const phantomAlsoEvm = Array.from(evmWallets.values()).some(
-    ({ info }) => info.name.toLowerCase().includes("phantom")
-  );
+  // Show phantom-sol only when chain is SOL — for EVM chains, Phantom already
+  // appears via EIP-6963 (app.phantom). Showing both creates duplicate entries.
+  const isSolChain = chainCode?.toUpperCase() === "SOL";
 
   const availableWallets: WalletInfo[] = [
     ...Array.from(evmWallets.values()).map(({ info }) => ({
@@ -163,9 +162,9 @@ export function useWallet(
       icon: info.icon,
       chain: "evm" as const,
     })),
-    hasPhantomSol && {
+    (hasPhantomSol && isSolChain) && {
       type: "phantom-sol",
-      name: phantomAlsoEvm ? "Phantom (Solana)" : "Phantom",
+      name: "Phantom",
       icon: "👻",
       chain: "solana" as const,
     },
