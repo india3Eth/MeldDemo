@@ -116,7 +116,10 @@ export function CryptoModal({ isOpen, onClose }: CryptoModalProps) {
                   className="h-9 w-9 rounded-full object-cover"
                 />
               ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-lg font-bold">
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-bold"
+                  style={{ background: tokens.hoverBg, color: tokens.textSecondary }}
+                >
                   {crypto.currencyCode.charAt(0)}
                 </div>
               )}

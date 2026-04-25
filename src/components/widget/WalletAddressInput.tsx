@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { useWidget } from "@/contexts/WidgetContext";
 import { useTheme } from "@/themes/ThemeProvider";
+import { useWallet } from "@/hooks/use-wallet";
 
 // =============================================================================
-// WalletAddressInput — wallet address field (required for buy flow)
+// WalletAddressInput — wallet address field with wallet connect button
 // =============================================================================
 
 // Fix #8: per-chain address format validation
@@ -38,27 +40,61 @@ interface WalletAddressInputProps {
 export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
   const { walletAddress, setWalletAddress, mode, selectedCrypto } = useWidget();
   const { tokens } = useTheme();
+  const wallet = useWallet(setWalletAddress);
+
+  // Re-sync connected wallet address after mode switch clears walletAddress
+  useEffect(() => {
+    if (wallet.connected && !walletAddress) {
+      setWalletAddress(wallet.connected.address);
+    }
+  }, [wallet.connected, walletAddress, setWalletAddress]);
 
   const isBuy = mode === "BUY";
   const isEmpty = !walletAddress.trim();
   const isInvalid = !isEmpty && !validateAddress(walletAddress, selectedCrypto?.chainCode);
+  const isWalletConnected = wallet.connected !== null;
 
+  const errorBorder = `1px solid ${tokens.errorColor}66`;
   const borderStyle = isInvalid
-    ? "1px solid #fca5a5"
+    ? errorBorder
     : isEmpty && isBuy
-      ? "1px solid #fca5a5"
+      ? errorBorder
       : tokens.inputBorder;
 
   return (
     <div className="mb-3.5">
-      <label
-        className="mb-2 block text-[13px] font-medium"
-        style={{ color: tokens.textSecondary }}
-      >
-        {isBuy ? "Wallet Address" : "Wallet Address (optional)"}
-      </label>
+      {/* Label row — wallet address label + connect/disconnect text link */}
+      <div className="mb-2 flex items-center justify-between">
+        <label
+          className="text-[13px] font-medium"
+          style={{ color: tokens.textSecondary }}
+        >
+          {isBuy ? "Wallet Address" : "Wallet Address (optional)"}
+        </label>
 
-      {/* Input + inline history button */}
+        {wallet.hasWallet && (
+          <span
+            onClick={
+              isWalletConnected
+                ? wallet.disconnect
+                : () => wallet.connect(selectedCrypto?.chainCode)
+            }
+            className="text-[12px] font-medium"
+            style={{
+              color: isWalletConnected ? tokens.successColor : tokens.linkColor,
+              cursor: "pointer",
+            }}
+          >
+            {wallet.isConnecting
+              ? "Connecting..."
+              : isWalletConnected
+                ? "Disconnect"
+                : "Connect Wallet"}
+          </span>
+        )}
+      </div>
+
+      {/* Input + history button */}
       <div
         className="flex items-center gap-2"
         style={{
@@ -72,11 +108,18 @@ export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
       >
         <input
           type="text"
-          placeholder="Enter wallet address to proceed"
+          placeholder={isWalletConnected ? "Connected" : "Enter wallet address"}
           value={walletAddress}
-          onChange={(e) => setWalletAddress(e.target.value)}
+          onChange={(e) => {
+            if (!isWalletConnected) setWalletAddress(e.target.value);
+          }}
+          readOnly={isWalletConnected}
           className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-          style={{ color: tokens.textPrimary, border: "none" }}
+          style={{
+            color: tokens.textPrimary,
+            border: "none",
+            opacity: isWalletConnected ? 0.7 : 1,
+          }}
         />
         <button
           onClick={onOpenHistory}
@@ -98,8 +141,13 @@ export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
       </div>
 
       {isInvalid && (
-        <p className="mt-1.5 text-[11px] text-red-400">
+        <p className="mt-1.5 text-[11px]" style={{ color: tokens.errorColor }}>
           Invalid {selectedCrypto?.chainCode ?? ""} address format
+        </p>
+      )}
+      {wallet.connectError && (
+        <p className="mt-1.5 text-[11px]" style={{ color: tokens.errorColor }}>
+          {wallet.connectError}
         </p>
       )}
     </div>

@@ -19,6 +19,7 @@ import { CryptoModal } from "@/components/modals/CryptoModal";
 import { ProviderModal } from "@/components/modals/ProviderModal";
 import { PaymentMethodModal } from "@/components/modals/PaymentMethodModal";
 import { TransactionHistoryModal } from "@/components/modals/TransactionHistoryModal";
+import { ErrorModal } from "@/components/modals/ErrorModal";
 
 // Context
 import { useWidget } from "@/contexts/WidgetContext";
@@ -27,7 +28,7 @@ import { useWidget } from "@/contexts/WidgetContext";
 // MeldWidget — the main crypto buy/sell widget
 // =============================================================================
 
-type ModalType = "country" | "fiatCurrency" | "crypto" | "provider" | "paymentMethod" | "history" | null;
+type ModalType = "country" | "fiatCurrency" | "crypto" | "provider" | "paymentMethod" | "history" | "error" | null;
 
 const WAITING_STATUS_LABELS: Record<string, string> = {
   PENDING_CREATED: "Transaction created",
@@ -38,9 +39,12 @@ const WAITING_STATUS_LABELS: Record<string, string> = {
 
 export function MeldWidget() {
   const { tokens } = useTheme();
-  const { mode, txPhase, txStatus, txId, resetTransaction } = useWidget();
+  const { mode, txPhase, txStatus, txId, resetTransaction, appError, clearError } = useWidget();
   const [openModal, setOpenModal] = useState<ModalType>(null);
-  const closeModal = () => setOpenModal(null);
+  const closeModal = () => {
+    if (openModal === "error") clearError();
+    setOpenModal(null);
+  };
 
   const isBuy = mode === "BUY";
 
@@ -51,22 +55,28 @@ export function MeldWidget() {
     }
   }, [txPhase]);
 
+  // Open error modal when appError is pushed
+  useEffect(() => {
+    if (appError) setOpenModal("error");
+  }, [appError]);
+
   return (
     <div
-      className="relative w-full max-w-[420px] overflow-hidden"
+      className="relative w-full max-w-[420px]"
       style={{
         background: tokens.widgetBg,
         border: tokens.widgetBorder,
         borderRadius: tokens.widgetRadius,
         boxShadow: tokens.widgetShadow,
         backdropFilter: tokens.widgetBackdrop,
-        padding: "32px",
-        minHeight: "520px",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
       }}
     >
 
-      {/* ── Widget form — always visible ── */}
-      <>
+      {/* ── Widget form ── */}
+      <div style={{ padding: "32px" }}>
         <WidgetHeader onOpenCountryModal={() => setOpenModal("country")} />
 
         <AmountSection
@@ -88,19 +98,25 @@ export function MeldWidget() {
         <SubmitButton />
 
         <PoweredByFooter />
+      </div>
 
-        {/* Modals */}
-        <CountryModal isOpen={openModal === "country"} onClose={closeModal} />
-        <CurrencyModal isOpen={openModal === "fiatCurrency"} onClose={closeModal} />
-        <CryptoModal isOpen={openModal === "crypto"} onClose={closeModal} />
-        <ProviderModal isOpen={openModal === "provider"} onClose={closeModal} />
-        <PaymentMethodModal isOpen={openModal === "paymentMethod"} onClose={closeModal} />
-        <TransactionHistoryModal
-          isOpen={openModal === "history"}
-          onClose={() => { closeModal(); resetTransaction(); }}
-          initialTxId={txPhase === "active" ? txId : null}
-        />
-      </>
+      {/* Modals */}
+      <CountryModal isOpen={openModal === "country"} onClose={closeModal} />
+      <CurrencyModal isOpen={openModal === "fiatCurrency"} onClose={closeModal} />
+      <CryptoModal isOpen={openModal === "crypto"} onClose={closeModal} />
+      <ProviderModal isOpen={openModal === "provider"} onClose={closeModal} />
+      <PaymentMethodModal isOpen={openModal === "paymentMethod"} onClose={closeModal} />
+      <TransactionHistoryModal
+        isOpen={openModal === "history"}
+        onClose={() => { closeModal(); resetTransaction(); }}
+        initialTxId={txPhase === "active" ? txId : null}
+      />
+      <ErrorModal
+        isOpen={openModal === "error"}
+        onClose={() => { clearError(); closeModal(); }}
+        title={appError?.title ?? "Error"}
+        message={appError?.message ?? ""}
+      />
 
       {/* ── Waiting overlay — blurs widget, early statuses only ── */}
       {txPhase === "waiting" && (
@@ -109,9 +125,9 @@ export function MeldWidget() {
             position: "absolute",
             inset: 0,
             borderRadius: tokens.widgetRadius,
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
-            background: "rgba(0,0,0,0.35)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            background: tokens.modalBg,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -123,15 +139,15 @@ export function MeldWidget() {
           }}
         >
           <div style={{ fontSize: "32px" }}>⏳</div>
-          <div style={{ color: "#ffffff", fontSize: "17px", fontWeight: 600 }}>
+          <div style={{ color: tokens.textPrimary, fontSize: "17px", fontWeight: 600 }}>
             Completing your transaction
           </div>
-          <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "13px" }}>
+          <div style={{ color: tokens.textSecondary, fontSize: "13px" }}>
             {txStatus
               ? (WAITING_STATUS_LABELS[txStatus] ?? txStatus)
               : "Waiting for provider…"}
           </div>
-          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "11px", marginTop: "2px" }}>
+          <div style={{ color: tokens.textMuted, fontSize: "11px", marginTop: "2px" }}>
             Complete the payment in the provider tab
           </div>
           <button
@@ -139,13 +155,13 @@ export function MeldWidget() {
             style={{
               marginTop: "16px",
               width: "100%",
-              borderRadius: "12px",
+              borderRadius: tokens.inputRadius,
               padding: "12px 0",
               fontSize: "15px",
               fontWeight: 600,
               background: "transparent",
-              color: "rgba(255,255,255,0.6)",
-              border: "1.5px solid rgba(255,255,255,0.25)",
+              color: tokens.textMuted,
+              border: `1.5px solid ${tokens.dividerColor}`,
               cursor: "pointer",
             }}
           >

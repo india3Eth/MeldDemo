@@ -177,7 +177,7 @@ function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
   }, [txStatus, refetch]);
 
   const status = tx?.status ?? null;
-  const cfg = status ? (STATUS_CONFIG[status] ?? { label: status, color: "#6b7280", bg: "#f3f4f6" }) : null;
+  const cfg = status ? (STATUS_CONFIG[status] ?? { label: status, color: "#6b7280" }) : null;
   const statusIcon = status === "SETTLED" ? "✓" : (status === "FAILED" || status === "DECLINED") ? "✕" : "↻";
 
   const crypto = tx?.cryptoDetails ?? null;
@@ -232,7 +232,7 @@ function TxDetail({ txId, onBack }: { txId: string; onBack: () => void }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", padding: "4px 0" }}>
           <div style={{
             width: "44px", height: "44px", borderRadius: "50%",
-            background: cfg.bg, display: "flex", alignItems: "center",
+            background: cfg.color + "18", display: "flex", alignItems: "center",
             justifyContent: "center", fontSize: "18px", fontWeight: 700, color: cfg.color,
           }}>
             {statusIcon}
@@ -386,7 +386,7 @@ export function TransactionHistoryModal({ isOpen, onClose, initialTxId }: Props)
           )}
 
           {!isLoading && error && (
-            <div style={{ color: "#dc2626", fontSize: "12px", textAlign: "center", padding: "24px 0" }}>
+            <div style={{ color: tokens.errorColor, fontSize: "12px", textAlign: "center", padding: "24px 0" }}>
               Failed to load transactions
             </div>
           )}

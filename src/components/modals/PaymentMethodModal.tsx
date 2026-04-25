@@ -55,7 +55,7 @@ export function PaymentMethodModal({ isOpen, onClose }: PaymentMethodModalProps)
               </span>
             </div>
             {isSelected && (
-              <span className="text-xl text-green-600">✓</span>
+              <span className="text-xl" style={{ color: tokens.successColor }}>✓</span>
             )}
           </div>
         );

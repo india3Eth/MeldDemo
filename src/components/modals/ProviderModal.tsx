@@ -23,7 +23,7 @@ interface ProviderModalProps {
 }
 
 export function ProviderModal({ isOpen, onClose }: ProviderModalProps) {
-  const { quotes, selectedQuote, setSelectedQuote, mode, isLoadingQuotes, quoteError, serviceProviderMap } = useWidget();
+  const { quotes, selectedQuote, setSelectedQuote, mode, isLoadingQuotes, serviceProviderMap } = useWidget();
   const { tokens } = useTheme();
 
   function handleSelect(quote: Quote) {
@@ -45,18 +45,8 @@ export function ProviderModal({ isOpen, onClose }: ProviderModalProps) {
         </div>
       )}
 
-      {/* Fix #2: quote error state */}
-      {!isLoadingQuotes && quoteError && (
-        <div className="py-8 text-center">
-          <div className="text-sm text-red-400">Failed to fetch quotes</div>
-          <div className="mt-1 text-xs" style={{ color: tokens.textMuted }}>
-            Check your network connection and try again
-          </div>
-        </div>
-      )}
-
-      {/* Fix #10: empty quotes with explanation */}
-      {!isLoadingQuotes && !quoteError && quotes.length === 0 && (
+      {/* Empty quotes with explanation */}
+      {!isLoadingQuotes && quotes.length === 0 && (
         <div className="py-8 text-center">
           <div className="text-sm" style={{ color: tokens.textMuted }}>
             No providers available
@@ -91,9 +81,10 @@ export function ProviderModal({ isOpen, onClose }: ProviderModalProps) {
           >
             <div className="flex items-center gap-3">
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-md text-lg font-bold text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-lg font-bold"
                 style={{
-                  background: "#000",
+                  background: tokens.accentBg,
+                  color: tokens.accentText,
                 }}
               >
                 {quote.serviceProvider.charAt(0)}
@@ -107,23 +98,32 @@ export function ProviderModal({ isOpen, onClose }: ProviderModalProps) {
                     {formatProviderName(quote.serviceProvider)}
                   </span>
                   {badge && !isBuilding && (
-                    <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${badge.className}`}>
+                    <span
+                      className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+                      style={{ background: badge.baseColor + "18", color: badge.baseColor }}
+                    >
                       {badge.label}
                     </span>
                   )}
                   {isNew && (
-                    <span className="rounded-md bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold text-purple-800">
+                    <span
+                      className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+                      style={{ background: tokens.linkColor + "18", color: tokens.linkColor }}
+                    >
                       New
                     </span>
                   )}
                   {isBuilding && (
-                    <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500">
+                    <span
+                      className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+                      style={{ background: tokens.hoverBg, color: tokens.textMuted }}
+                    >
                       Coming Soon
                     </span>
                   )}
                 </div>
                 {lowKyc === true && (
-                  <div className="mt-0.5 text-[11px] text-blue-500">
+                  <div className="mt-0.5 text-[11px]" style={{ color: tokens.linkColor }}>
                     No Documents Required
                   </div>
                 )}
@@ -148,8 +148,8 @@ export function ProviderModal({ isOpen, onClose }: ProviderModalProps) {
   );
 }
 
-function getBadge(score: number): { label: string; className: string } | null {
-  if (score >= 70) return { label: "Best Match", className: "bg-green-100 text-green-800" };
-  if (score >= 30) return { label: "Recommended", className: "bg-blue-100 text-blue-800" };
+function getBadge(score: number): { label: string; baseColor: string } | null {
+  if (score >= 70) return { label: "Best Match", baseColor: "#16a34a" };
+  if (score >= 30) return { label: "Recommended", baseColor: "#2563eb" };
   return null;
 }

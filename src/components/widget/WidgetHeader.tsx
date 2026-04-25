@@ -20,11 +20,12 @@ export function WidgetHeader({ onOpenCountryModal }: WidgetHeaderProps) {
     <div className="mb-6 flex items-center justify-between">
       {/* Logo */}
       <div
-        className="flex h-11 w-11 items-center justify-center text-2xl font-bold text-white"
+        className="flex h-11 w-11 items-center justify-center text-2xl font-bold"
         style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: tokens.accentBg,
+          color: tokens.accentText,
           borderRadius: "12px",
-          boxShadow: "0 4px 8px rgba(102,126,234,0.3)",
+          boxShadow: tokens.accentShadow,
         }}
       >
         ⬢

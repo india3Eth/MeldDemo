@@ -18,15 +18,16 @@ export function PoweredByFooter() {
       }}
     >
       <span>Powered by</span>
-      <span className="font-bold" style={{ color: "#667eea" }}>
+      <span className="font-bold" style={{ color: tokens.linkColor }}>
         Meld.io
       </span>
       <div
-        className="flex h-5 w-5 items-center justify-center text-[11px] font-bold text-white"
+        className="flex h-5 w-5 items-center justify-center text-[11px] font-bold"
         style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: tokens.accentBg,
+          color: tokens.accentText,
           borderRadius: "5px",
-          boxShadow: "0 2px 4px rgba(102,126,234,0.3)",
+          boxShadow: tokens.accentShadow,
         }}
       >
         ⬢

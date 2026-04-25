@@ -48,11 +48,11 @@ textarea {
   to   { opacity: 0; }
 }
 
-/* Panel: slide up from bottom */
+/* Panel: slide up from bottom — shorter travel to reduce shake */
 @keyframes modal-panel-in {
   from {
     opacity: 0;
-    transform: translateY(100%);
+    transform: translateY(30%);
   }
   to {
     opacity: 1;
@@ -66,20 +66,22 @@ textarea {
   }
   to {
     opacity: 0;
-    transform: translateY(100%);
+    transform: translateY(30%);
   }
 }
 
 .modal-backdrop-enter {
-  animation: modal-backdrop-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modal-backdrop-in 0.2s ease-out forwards;
 }
 .modal-backdrop-exit {
-  animation: modal-backdrop-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: modal-backdrop-out 0.15s ease-in forwards;
 }
 
 .modal-panel-enter {
-  animation: modal-panel-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modal-panel-in 0.25s ease-out forwards;
+  will-change: transform, opacity;
 }
 .modal-panel-exit {
-  animation: modal-panel-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: modal-panel-out 0.15s ease-in forwards;
+  will-change: transform, opacity;
 }

@@ -17,7 +17,6 @@ export function SubmitButton() {
     isCreatingSession,
     currentLimit,
     amount,
-    sessionError,
   } = useWidget();
   const { tokens } = useTheme();
 
@@ -45,9 +44,6 @@ export function SubmitButton() {
 
   return (
     <div className="mb-5">
-      {sessionError && (
-        <p className="mb-2 text-center text-xs text-red-400">{sessionError}</p>
-      )}
       <button
         onClick={handleBuyOrSell}
         disabled={!canSubmit || isCreatingSession}
