@@ -38,7 +38,14 @@ import { useServiceProviders } from "@/hooks/use-service-providers";
 // Widget Context — single source of truth for all widget state
 // =============================================================================
 
-type TransactionPhase = "idle" | "waiting" | "active";
+type TransactionPhase = "idle" | "waiting" | "sell_confirm" | "active";
+
+export interface SellConfirmData {
+  sourceCurrencyCode: string;
+  sourceAmount: number;
+  destinationWalletAddress: string;
+  externalSessionId: string;
+}
 
 interface WidgetState {
   mode: SessionType;
@@ -88,6 +95,8 @@ interface WidgetState {
   txPhase: TransactionPhase;
   txStatus: string | null;
   txId: string | null;
+  sellConfirmData: SellConfirmData | null;
+  confirmSellTransfer: () => Promise<void>;
   resetTransaction: () => void;
 }
 
@@ -189,7 +198,11 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
   const [txPhase, setTxPhase] = useState<TransactionPhase>("idle");
   const [txStatus, setTxStatus] = useState<string | null>(null);
   const [txId, setTxId] = useState<string | null>(null);
+  const [sellConfirmData, setSellConfirmData] = useState<SellConfirmData | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  // Stores the externalSessionId for the active SELL session so the
+  // BroadcastChannel handler can reference it without closing over stale state
+  const sellSessionIdRef = useRef<string | null>(null);
 
   function unsubscribe() {
     if (channelRef.current) {
@@ -203,6 +216,8 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     setTxPhase("idle");
     setTxStatus(null);
     setTxId(null);
+    setSellConfirmData(null);
+    sellSessionIdRef.current = null;
   }
 
   function subscribeToTransaction(sessionId: string) {
@@ -245,6 +260,73 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
 
     channelRef.current = channel;
   }
+
+  // ── SELL preferred flow: listen for redirect signal from /transaction/success ──
+  useEffect(() => {
+    let bc: BroadcastChannel | null = null;
+
+    const handleRedirect = async (params: Record<string, string>) => {
+      // Use the externalSessionId we stored when creating the session.
+      // Meld may also append it as a URL param — use whichever is available.
+      const sessionId = sellSessionIdRef.current ?? params["externalSessionId"];
+      if (!sessionId) return;
+
+      try {
+        const res = await fetch(`/api/meld/transactions/sessions/${encodeURIComponent(sessionId)}`);
+        if (!res.ok) return;
+        const tx = await res.json() as {
+          sourceCurrencyCode?: string;
+          sourceAmount?: number;
+          cryptoDetails?: { destinationWalletAddress?: string | null };
+        };
+
+        const destAddr = tx.cryptoDetails?.destinationWalletAddress;
+        if (!tx.sourceCurrencyCode || !tx.sourceAmount || !destAddr) {
+          // Force-fetch returned incomplete data — stay on waiting, Supabase will fire
+          return;
+        }
+
+        setSellConfirmData({
+          sourceCurrencyCode: tx.sourceCurrencyCode,
+          sourceAmount: tx.sourceAmount,
+          destinationWalletAddress: destAddr,
+          externalSessionId: sessionId,
+        });
+        setTxPhase("sell_confirm");
+      } catch {
+        // Network error — stay on waiting overlay, Supabase will handle status
+      }
+    };
+
+    try {
+      bc = new BroadcastChannel("meld_sell_redirect");
+      bc.onmessage = (e: MessageEvent<{ type: string; params: Record<string, string> }>) => {
+        if (e.data?.type === "MELD_SELL_REDIRECT") {
+          handleRedirect(e.data.params);
+        }
+      };
+    } catch {
+      // BroadcastChannel not supported — fall back to storage event
+      const onStorage = (e: StorageEvent) => {
+        if (e.key === "meld_sell_redirect" && e.newValue) {
+          try {
+            const { params } = JSON.parse(e.newValue) as { params: Record<string, string> };
+            handleRedirect(params);
+          } catch { /* ignore */ }
+        }
+      };
+      window.addEventListener("storage", onStorage);
+      return () => window.removeEventListener("storage", onStorage);
+    }
+
+    return () => { bc?.close(); };
+  }, []); // mount only — sellSessionIdRef is a ref, not state
+
+  // ── SELL confirm: user acknowledges they've sent (or will send) the crypto ──
+  const confirmSellTransfer = useCallback(async () => {
+    // Transition to active phase — transaction history modal opens, webhooks track completion
+    setTxPhase("active");
+  }, []);
 
   // Clear API-derived limit overrides when the currency changes (not on provider change —
   // provider goes null→value when first quote loads, which would wipe a just-set derived limit)
@@ -381,6 +463,10 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       ? `${window.location.origin}/transaction/success`
       : undefined;
 
+    const externalSessionId = `demo-session-${crypto.randomUUID()}`;
+    // For SELL preferred flow: store so BroadcastChannel handler can force-fetch
+    if (!isBuy) sellSessionIdRef.current = externalSessionId;
+
     const { data: session, error: sessionError } = await createSession({
       sessionType: mode,
       sessionData: {
@@ -399,7 +485,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
         redirectFlow: mode === "SELL",
       },
       externalCustomerId: walletAddress || `demo-user-${Date.now()}`,
-      externalSessionId: `demo-session-${crypto.randomUUID()}`,
+      externalSessionId: externalSessionId,
     });
 
     if (!session) {
@@ -619,6 +705,8 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       txPhase,
       txStatus,
       txId,
+      sellConfirmData,
+      confirmSellTransfer,
       resetTransaction,
     }),
     [
@@ -631,7 +719,7 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
       refinedPurchaseLimits, refinedSellLimits,
       appError, pushError, clearError,
       handleBuyOrSell, handleSetAmount, currentLimit, limitUnavailable, quoteDerivedMinimum, quoteDerivedMaximum,
-      txPhase, txStatus, txId,
+      txPhase, txStatus, txId, sellConfirmData, confirmSellTransfer,
     ]
   );
 

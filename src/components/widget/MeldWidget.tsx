@@ -11,6 +11,7 @@ import { WalletAddressInput } from "./WalletAddressInput";
 import { PaymentMethodSelect } from "./PaymentMethodSelect";
 import { SubmitButton } from "./SubmitButton";
 import { PoweredByFooter } from "./PoweredByFooter";
+import { SellConfirmOverlay } from "./SellConfirmOverlay";
 
 // Modals
 import { CountryModal } from "@/components/modals/CountryModal";
@@ -118,6 +119,9 @@ export function MeldWidget() {
         message={appError?.message ?? ""}
       />
 
+      {/* ── SELL confirm overlay — transfer details after provider redirect ── */}
+      {txPhase === "sell_confirm" && <SellConfirmOverlay />}
+
       {/* ── Waiting overlay — blurs widget, early statuses only ── */}
       {txPhase === "waiting" && (
         <div
@@ -148,7 +152,9 @@ export function MeldWidget() {
               : "Waiting for provider…"}
           </div>
           <div style={{ color: tokens.textMuted, fontSize: "11px", marginTop: "2px" }}>
-            Complete the payment in the provider tab
+            {isBuy
+              ? "Complete the payment in the provider tab"
+              : "Complete KYC in the provider tab — you'll return here to send the crypto"}
           </div>
           <button
             onClick={resetTransaction}
