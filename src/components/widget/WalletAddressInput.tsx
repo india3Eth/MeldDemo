@@ -10,6 +10,21 @@ import type { WalletType } from "@/hooks/use-wallet";
 // WalletAddressInput — wallet address field with multi-wallet picker
 // =============================================================================
 
+function WalletIcon({ icon, size }: { icon: string | undefined; size: number }) {
+  if (!icon) return <span style={{ fontSize: size }}>🔗</span>;
+  if (icon.startsWith("data:") || icon.startsWith("http://") || icon.startsWith("https://")) {
+    return (
+      <img
+        src={icon}
+        alt=""
+        style={{ width: size, height: size, borderRadius: 4, flexShrink: 0 }}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+      />
+    );
+  }
+  return <span style={{ fontSize: size, lineHeight: 1, flexShrink: 0 }}>{icon}</span>;
+}
+
 function validateAddress(address: string, chainCode?: string): boolean {
   if (!address) return true;
   const a = address.trim();
@@ -106,11 +121,7 @@ export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
             >
               {wallet.isConnecting ? "Connecting…" : isWalletConnected ? (
                 <>
-                  {connectedWalletInfo?.icon && connectedWalletInfo.icon.startsWith("data:") ? (
-                    <img src={connectedWalletInfo.icon} alt="" style={{ width: 14, height: 14, borderRadius: 3 }} />
-                  ) : (
-                    <span style={{ fontSize: 14 }}>{connectedWalletInfo?.icon ?? "🔗"}</span>
-                  )}
+                  <WalletIcon icon={connectedWalletInfo?.icon} size={14} />
                   Disconnect
                 </>
               ) : "Connect Wallet"}
@@ -158,11 +169,7 @@ export function WalletAddressInput({ onOpenHistory }: WalletAddressInputProps) {
                     onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = tokens.hoverBg; }}
                     onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
                   >
-                    {w.icon.startsWith("data:") ? (
-                      <img src={w.icon} alt="" style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0 }} />
-                    ) : (
-                      <span style={{ fontSize: "18px", lineHeight: 1 }}>{w.icon}</span>
-                    )}
+                    <WalletIcon icon={w.icon} size={18} />
                     {w.name}
                   </button>
                 ))}

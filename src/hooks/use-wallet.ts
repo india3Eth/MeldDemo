@@ -149,6 +149,12 @@ export function useWallet(
   }, [evmWallets]);
 
   // ── Available wallets list ──────────────────────────────────────────────────
+  // If Phantom is present both as EIP-6963 EVM wallet AND window.solana,
+  // label the Solana entry "Phantom (Solana)" to avoid two identical "Phantom" rows.
+  const phantomAlsoEvm = Array.from(evmWallets.values()).some(
+    ({ info }) => info.name.toLowerCase().includes("phantom")
+  );
+
   const availableWallets: WalletInfo[] = [
     ...Array.from(evmWallets.values()).map(({ info }) => ({
       type: info.rdns,
@@ -158,7 +164,7 @@ export function useWallet(
     })),
     hasPhantomSol && {
       type: "phantom-sol",
-      name: "Phantom",
+      name: phantomAlsoEvm ? "Phantom (Solana)" : "Phantom",
       icon: "👻",
       chain: "solana" as const,
     },
