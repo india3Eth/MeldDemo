@@ -41,9 +41,17 @@ import { useServiceProviders } from "@/hooks/use-service-providers";
 type TransactionPhase = "idle" | "waiting" | "sell_confirm" | "active";
 
 export interface SellConfirmData {
-  sourceCurrencyCode: string;
-  sourceAmount: number;
-  destinationWalletAddress: string;
+  // From redirect URL params
+  partnerOrderId: string;
+  cryptoCurrency: string;
+  fiatCurrency: string;
+  cryptoAmount: number;
+  fiatAmount: number;
+  walletAddress: string;       // destination — user sends crypto here
+  totalFeeInFiat: number | null;
+  network: string | null;
+  status: string;
+  // Internal
   externalSessionId: string;
 }
 
@@ -266,35 +274,63 @@ export function WidgetProvider({ children }: { children: ReactNode }) {
     let bc: BroadcastChannel | null = null;
 
     const handleRedirect = async (params: Record<string, string>) => {
-      // Use the externalSessionId we stored when creating the session.
-      // Meld may also append it as a URL param — use whichever is available.
-      const sessionId = sellSessionIdRef.current ?? params["externalSessionId"];
-      if (!sessionId) return;
+      const sessionId = sellSessionIdRef.current ?? params["externalSessionId"] ?? "";
 
+      // Build confirm data directly from redirect URL params — provider appends everything needed
+      const walletAddress = params["walletAddress"];
+      const cryptoCurrency = params["cryptoCurrency"];
+      const fiatCurrency = params["fiatCurrency"];
+      const cryptoAmount = parseFloat(params["cryptoAmount"] ?? "");
+      const fiatAmount = parseFloat(params["fiatAmount"] ?? "");
+      const partnerOrderId = params["partnerOrderId"] ?? "";
+
+      if (walletAddress && cryptoCurrency && fiatCurrency && !isNaN(cryptoAmount) && !isNaN(fiatAmount)) {
+        setSellConfirmData({
+          partnerOrderId,
+          cryptoCurrency,
+          fiatCurrency,
+          cryptoAmount,
+          fiatAmount,
+          walletAddress,
+          totalFeeInFiat: parseFloat(params["totalFeeInFiat"] ?? "") || null,
+          network: params["network"] ?? null,
+          status: params["status"] ?? "",
+          externalSessionId: sessionId,
+        });
+        setTxPhase("sell_confirm");
+        return;
+      }
+
+      // Fallback: params incomplete — force-fetch the transaction
+      if (!sessionId) return;
       try {
         const res = await fetch(`/api/meld/transactions/sessions/${encodeURIComponent(sessionId)}`);
         if (!res.ok) return;
         const tx = await res.json() as {
           sourceCurrencyCode?: string;
           sourceAmount?: number;
+          destinationCurrencyCode?: string;
+          destinationAmount?: number;
           cryptoDetails?: { destinationWalletAddress?: string | null };
+          externalSessionId?: string;
         };
-
         const destAddr = tx.cryptoDetails?.destinationWalletAddress;
-        if (!tx.sourceCurrencyCode || !tx.sourceAmount || !destAddr) {
-          // Force-fetch returned incomplete data — stay on waiting, Supabase will fire
-          return;
-        }
-
+        if (!tx.sourceCurrencyCode || !tx.sourceAmount || !destAddr) return;
         setSellConfirmData({
-          sourceCurrencyCode: tx.sourceCurrencyCode,
-          sourceAmount: tx.sourceAmount,
-          destinationWalletAddress: destAddr,
+          partnerOrderId: sessionId,
+          cryptoCurrency: tx.sourceCurrencyCode,
+          fiatCurrency: tx.destinationCurrencyCode ?? "",
+          cryptoAmount: tx.sourceAmount,
+          fiatAmount: tx.destinationAmount ?? 0,
+          walletAddress: destAddr,
+          totalFeeInFiat: null,
+          network: null,
+          status: "",
           externalSessionId: sessionId,
         });
         setTxPhase("sell_confirm");
       } catch {
-        // Network error — stay on waiting overlay, Supabase will handle status
+        // Stay on waiting — Supabase Realtime will handle status
       }
     };
 

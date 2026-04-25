@@ -1,21 +1,17 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import QRCode from "react-qr-code";
 import { useWidget } from "@/contexts/WidgetContext";
 import { useTheme } from "@/themes/ThemeProvider";
 
 // =============================================================================
 // SellConfirmOverlay — shown after provider redirects back in SELL preferred flow
-//
-// Displays the transfer details fetched from the force-fetch endpoint:
-//   - Token + amount the user must send
-//   - Destination wallet address (provided by the off-ramp provider)
-//   - "Confirm sent" button to proceed to transaction tracking
 // =============================================================================
 
 function truncateAddress(addr: string): string {
-  if (addr.length <= 16) return addr;
-  return `${addr.slice(0, 8)}…${addr.slice(-8)}`;
+  if (addr.length <= 20) return addr;
+  return `${addr.slice(0, 10)}…${addr.slice(-10)}`;
 }
 
 export function SellConfirmOverlay() {
@@ -25,11 +21,11 @@ export function SellConfirmOverlay() {
   const [confirming, setConfirming] = useState(false);
 
   const copyAddress = useCallback(() => {
-    if (!sellConfirmData?.destinationWalletAddress) return;
-    navigator.clipboard.writeText(sellConfirmData.destinationWalletAddress).catch(() => {});
+    if (!sellConfirmData?.walletAddress) return;
+    navigator.clipboard.writeText(sellConfirmData.walletAddress).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [sellConfirmData?.destinationWalletAddress]);
+  }, [sellConfirmData?.walletAddress]);
 
   const handleConfirm = useCallback(async () => {
     setConfirming(true);
@@ -39,7 +35,16 @@ export function SellConfirmOverlay() {
 
   if (!sellConfirmData) return null;
 
-  const { sourceCurrencyCode, sourceAmount, destinationWalletAddress } = sellConfirmData;
+  const {
+    partnerOrderId,
+    cryptoCurrency,
+    fiatCurrency,
+    cryptoAmount,
+    fiatAmount,
+    walletAddress,
+    totalFeeInFiat,
+    network,
+  } = sellConfirmData;
 
   return (
     <div
@@ -52,71 +57,103 @@ export function SellConfirmOverlay() {
         background: tokens.modalBg,
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "16px",
-        padding: "32px",
-        textAlign: "center",
+        overflowY: "auto",
+        padding: "24px",
         zIndex: 10,
       }}
     >
-      {/* Icon */}
-      <div style={{ fontSize: "36px" }}>↗</div>
-
-      {/* Heading */}
-      <div style={{ color: tokens.textPrimary, fontSize: "17px", fontWeight: 700 }}>
-        Send your crypto
+      {/* Header */}
+      <div style={{ textAlign: "center", marginBottom: "16px" }}>
+        <div style={{ fontSize: "28px", marginBottom: "6px" }}>↗</div>
+        <div style={{ color: tokens.textPrimary, fontSize: "17px", fontWeight: 700 }}>
+          Send your crypto
+        </div>
+        <div style={{ color: tokens.textMuted, fontSize: "11px", marginTop: "4px" }}>
+          Order ID: {partnerOrderId}
+        </div>
       </div>
 
-      <div style={{ color: tokens.textSecondary, fontSize: "13px", lineHeight: 1.5 }}>
-        Transfer the exact amount below to complete your sell order.
-      </div>
-
-      {/* Amount card */}
+      {/* Trade summary */}
       <div
         style={{
-          width: "100%",
           background: tokens.sectionBg,
           border: tokens.sectionBorder,
           borderRadius: tokens.sectionRadius,
-          padding: "14px 16px",
-          textAlign: "left",
+          padding: "12px 14px",
+          marginBottom: "10px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        <div style={{ color: tokens.textMuted, fontSize: "11px", marginBottom: "4px" }}>
-          Amount to send
+        {/* You send */}
+        <div style={{ textAlign: "center" }}>
+          <div style={{ color: tokens.textMuted, fontSize: "10px", marginBottom: "2px" }}>You send</div>
+          <div style={{ color: tokens.errorColor, fontSize: "18px", fontWeight: 700 }}>
+            {cryptoAmount} {cryptoCurrency}
+          </div>
+          {network && (
+            <div style={{ color: tokens.textMuted, fontSize: "10px", marginTop: "1px" }}>
+              on {network}
+            </div>
+          )}
         </div>
-        <div style={{ color: tokens.textPrimary, fontSize: "26px", fontWeight: 700 }}>
-          {sourceAmount} {sourceCurrencyCode}
+
+        <div style={{ color: tokens.textMuted, fontSize: "16px" }}>→</div>
+
+        {/* You receive */}
+        <div style={{ textAlign: "center" }}>
+          <div style={{ color: tokens.textMuted, fontSize: "10px", marginBottom: "2px" }}>You receive</div>
+          <div style={{ color: tokens.successColor, fontSize: "18px", fontWeight: 700 }}>
+            {fiatAmount} {fiatCurrency}
+          </div>
+          {totalFeeInFiat != null && (
+            <div style={{ color: tokens.textMuted, fontSize: "10px", marginTop: "1px" }}>
+              fee: {totalFeeInFiat} {fiatCurrency}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Destination address card */}
+      {/* QR code */}
       <div
         style={{
-          width: "100%",
+          background: "#ffffff",
+          borderRadius: "12px",
+          padding: "12px",
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: "10px",
+        }}
+      >
+        <QRCode value={walletAddress} size={160} />
+      </div>
+
+      {/* Wallet address */}
+      <div
+        style={{
           background: tokens.sectionBg,
           border: tokens.sectionBorder,
           borderRadius: tokens.sectionRadius,
-          padding: "14px 16px",
-          textAlign: "left",
+          padding: "12px 14px",
+          marginBottom: "10px",
         }}
       >
-        <div style={{ color: tokens.textMuted, fontSize: "11px", marginBottom: "4px" }}>
-          Send to address
+        <div style={{ color: tokens.textMuted, fontSize: "10px", marginBottom: "6px" }}>
+          Send {cryptoCurrency} to this address
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <div
             style={{
               color: tokens.textPrimary,
-              fontSize: "13px",
+              fontSize: "12px",
               fontWeight: 500,
               fontFamily: "monospace",
-              wordBreak: "break-all",
               flex: 1,
+              wordBreak: "break-all",
             }}
           >
-            {truncateAddress(destinationWalletAddress)}
+            {truncateAddress(walletAddress)}
           </div>
           <button
             onClick={copyAddress}
@@ -125,7 +162,7 @@ export function SellConfirmOverlay() {
               background: tokens.pillBg,
               border: tokens.pillBorder,
               borderRadius: "6px",
-              padding: "4px 10px",
+              padding: "5px 10px",
               fontSize: "11px",
               fontWeight: 600,
               color: copied ? tokens.successColor : tokens.textSecondary,
@@ -133,7 +170,7 @@ export function SellConfirmOverlay() {
               whiteSpace: "nowrap",
             }}
           >
-            {copied ? "Copied" : "Copy"}
+            {copied ? "Copied!" : "Copy"}
           </button>
         </div>
       </div>
@@ -141,28 +178,27 @@ export function SellConfirmOverlay() {
       {/* Warning */}
       <div
         style={{
-          width: "100%",
           color: tokens.textMuted,
           fontSize: "11px",
           lineHeight: 1.5,
           background: `${tokens.errorColor}18`,
           border: `1px solid ${tokens.errorColor}44`,
           borderRadius: "8px",
-          padding: "10px 12px",
-          textAlign: "left",
+          padding: "9px 12px",
+          marginBottom: "14px",
         }}
       >
-        Send <strong>{sourceAmount} {sourceCurrencyCode}</strong> exactly. Wrong amount or address = lost funds.
+        Send exactly <strong>{cryptoAmount} {cryptoCurrency}</strong>. Wrong amount or address = lost funds.
       </div>
 
-      {/* Confirm button */}
+      {/* Confirm */}
       <button
         onClick={handleConfirm}
         disabled={confirming}
         style={{
           width: "100%",
           borderRadius: tokens.inputRadius,
-          padding: "14px 0",
+          padding: "13px 0",
           fontSize: "15px",
           fontWeight: 700,
           background: tokens.accentBg,
@@ -171,6 +207,7 @@ export function SellConfirmOverlay() {
           cursor: confirming ? "not-allowed" : "pointer",
           opacity: confirming ? 0.7 : 1,
           boxShadow: tokens.accentShadow,
+          marginBottom: "10px",
         }}
       >
         {confirming ? "Processing…" : "I've sent the crypto"}
@@ -186,6 +223,7 @@ export function SellConfirmOverlay() {
           fontSize: "13px",
           cursor: "pointer",
           padding: "4px 0",
+          textAlign: "center",
         }}
       >
         Cancel
