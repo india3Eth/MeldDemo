@@ -12,12 +12,14 @@ import type { WalletType } from "@/hooks/use-wallet";
 
 function WalletIcon({ icon, size }: { icon: string | undefined; size: number }) {
   if (!icon) return <span style={{ fontSize: size }}>🔗</span>;
-  if (icon.startsWith("data:") || icon.startsWith("http://") || icon.startsWith("https://")) {
+  // Emoji/symbols are ≤ 4 chars. Any URL or data URI is much longer → render as img.
+  // This avoids fragile prefix checks that break if the wallet uses an unexpected scheme.
+  if (icon.length > 4) {
     return (
       <img
         src={icon}
         alt=""
-        style={{ width: size, height: size, borderRadius: 4, flexShrink: 0 }}
+        style={{ width: size, height: size, borderRadius: 4, flexShrink: 0, objectFit: "contain" }}
         onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
       />
     );

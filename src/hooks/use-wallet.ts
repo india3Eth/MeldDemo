@@ -110,6 +110,7 @@ export function useWallet(
   useEffect(() => {
     const handler = (event: Event) => {
       const { info, provider } = (event as CustomEvent<EIP6963ProviderDetail>).detail;
+      console.log("[EIP-6963]", info.rdns, "icon prefix:", info.icon?.slice(0, 30));
       setEvmWallets((prev) => {
         const next = new Map(prev);
         next.set(info.rdns, { info, provider });
