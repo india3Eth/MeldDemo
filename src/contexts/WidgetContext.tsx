@@ -124,15 +124,20 @@ const WAITING_STATUSES = new Set(["PENDING_CREATED", "PENDING", "TWO_FA_REQUIRED
 const TERMINAL_STATUSES = new Set(["SETTLED", "FAILED", "DECLINED", "CANCELLED", "REFUNDED"]);
 const POLL_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
-// Extract human-readable message from proxy error string: {"error":"Meld API error 400 on PATH: {\"message\":\"...\"}"}
+// Extract human-readable message from proxy error string: {"error":"Meld API error 400 on PATH: {\"message\":\"...\",\"errors\":[...]}"}
 function parseProxyErrorMessage(errorStr: string): string {
   try {
     const outer = JSON.parse(errorStr) as { error?: string };
     const inner = outer.error ?? errorStr;
     const jsonMatch = inner.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]) as { message?: string };
-      if (parsed.message) return parsed.message;
+      const parsed = JSON.parse(jsonMatch[0]) as { message?: string; errors?: string[] };
+      if (parsed.message) {
+        if (parsed.errors?.length) {
+          return `${parsed.message}: ${parsed.errors.join("; ")}`;
+        }
+        return parsed.message;
+      }
     }
     return inner;
   } catch {

@@ -6,7 +6,7 @@ import type { CryptoCurrency } from "@/lib/meld/types";
 export function useCryptoCurrencies(
   countryCode: string | null,
   fiatCurrency: string | null,
-  category: "CRYPTO_ONRAMP" | "CRYPTO_OFFRAMP",
+  category: "CRYPTO_ONRAMP" | "CRYPTO_OFFRAMP" | "CRYPTO_TRANSFER",
   serviceProvider: string | null = null
 ) {
   return useFetch<CryptoCurrency[]>(

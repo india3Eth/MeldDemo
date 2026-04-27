@@ -254,9 +254,10 @@ export interface QuoteResponse {
 
 export interface SessionData {
   countryCode: string;
-  sourceCurrencyCode: string;
+  sourceCurrencyCode?: string;       // BUY / SELL flows
+  sourceCurrencyCodes?: string[];    // TRANSFER flow — array of currency codes to transfer
   sourceAmount: string;
-  destinationCurrencyCode: string;
+  destinationCurrencyCode?: string;  // BUY / SELL flows; not used for TRANSFER
   serviceProvider: string;
   walletAddress?: string;
   paymentMethodType?: string;
